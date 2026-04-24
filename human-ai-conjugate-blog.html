@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人机共轭：从 LLM 到 AGI 的三次相位跃迁</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --bg2: #f2f0eb;
+    --bg3: #eceae4;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #1a1916;
+    --text2: #5a5750;
+    --text3: #a09d96;
+    --accent: #b5622a;
+    --accent2: #2e7d5e;
+    --accent3: #5a4ea0;
+    --purple: #5a4ea0;
+    --teal: #2e7d5e;
+    --coral: #b5622a;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Noto Serif SC', serif;
+    --sans: 'Noto Sans SC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.8;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    width: 0%;
+    z-index: 100;
+    transition: width 0.1s linear;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250,249,246,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  /* ── LAYOUT ── */
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 0.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: 'CONJUGATE';
+    position: absolute;
+    right: -20px;
+    top: 80px;
+    font-family: var(--mono);
+    font-size: 120px;
+    font-weight: 500;
+    color: rgba(0,0,0,0.04);
+    letter-spacing: -0.05em;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.2s forwards;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    color: var(--text2);
+    max-width: 560px;
+    line-height: 1.9;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.3s forwards;
+  }
+
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.4s forwards;
+  }
+
+  .hero-meta-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+
+  /* ── PHASE INTRO ── */
+  .phase-trio {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.5s forwards;
+  }
+
+  .phase-item {
+    padding: 2rem 1.5rem;
+    border-right: 0.5px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  .phase-item:last-child { border-right: none; }
+  .phase-item:hover { background: var(--bg2); }
+
+  .phase-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.1em;
+  }
+
+  .phase-item h3 {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  .phase-item p {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .phase-p1 .phase-item-bar { background: var(--purple); }
+  .phase-p2 .phase-item-bar { background: var(--teal); }
+  .phase-p3 .phase-item-bar { background: var(--coral); }
+
+  .phase-item-bar {
+    height: 2px;
+    width: 24px;
+    margin-bottom: 1rem;
+    border-radius: 1px;
+  }
+
+  /* ── ARTICLE BODY ── */
+  .article {
+    padding: 0;
+  }
+
+  .section {
+    padding: 5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 0.5px;
+    background: var(--border);
+    max-width: 60px;
+  }
+
+  .section h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+  }
+
+  .section p {
+    font-size: 16px;
+    color: var(--text2);
+    line-height: 1.9;
+    margin-bottom: 1.2rem;
+    font-weight: 300;
+  }
+
+  strong {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-left: 2px solid var(--accent);
+    padding: 1.2rem 1.5rem;
+    margin: 2rem 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.8;
+  }
+
+  .callout strong { color: var(--accent); }
+
+  /* ── CONJUGATE VIS ── */
+  .conj-vis {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    align-items: stretch;
+    gap: 0;
+    margin: 2.5rem 0;
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .conj-col {
+    padding: 1.5rem;
+    background: var(--bg2);
+  }
+
+  .conj-col:last-child {
+    background: var(--bg3);
+  }
+
+  .conj-col-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .conj-col ul {
+    list-style: none;
+    font-size: 14px;
+    color: var(--text2);
+  }
+
+  .conj-col ul li {
+    padding: 5px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .conj-col ul li::before {
+    content: '';
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--text3);
+    flex-shrink: 0;
+  }
+
+  .conj-mid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border-left: 0.5px solid var(--border);
+    border-right: 0.5px solid var(--border);
+  }
+
+  .conj-mid-text {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    writing-mode: vertical-rl;
+    text-transform: uppercase;
+  }
+
+  /* ── LOOP FLOW ── */
+  .loop-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .loop-node {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    padding: 6px 14px;
+    border: 0.5px solid var(--border2);
+    border-radius: 20px;
+    background: var(--bg3);
+    white-space: nowrap;
+  }
+
+  .loop-arrow {
+    color: var(--text3);
+    font-size: 14px;
+    font-family: var(--mono);
+  }
+
+  .loop-return {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-left: auto;
+  }
+
+  /* ── TABLE ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    font-size: 14px;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 10px 16px;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    font-weight: 400;
+    text-transform: uppercase;
+  }
+
+  .data-table td {
+    padding: 12px 16px;
+    border: 0.5px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+
+  .data-table tr:hover td { background: var(--bg2); }
+
+  /* ── AGI CONDITIONS ── */
+  .agi-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+
+  .agi-item {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    align-items: start;
+  }
+
+  .agi-item:last-child { border-bottom: none; }
+
+  .agi-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text3);
+    padding-top: 3px;
+  }
+
+  .agi-content strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  .agi-content span {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  /* ── TWO-WAY ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 2rem 0;
+  }
+
+  .two-box {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem;
+  }
+
+  .two-box-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .arrow-badge {
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .two-box ul {
+    list-style: none;
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  .two-box ul li {
+    padding: 4px 0;
+    display: flex;
+    gap: 8px;
+  }
+
+  .two-box ul li::before {
+    content: '—';
+    color: var(--text3);
+    flex-shrink: 0;
+  }
+
+  /* ── FUTURE LIST ── */
+  .future-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+
+  .future-item {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    align-items: start;
+  }
+
+  .future-item:last-child { border-bottom: none; }
+
+  .future-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+
+  .future-content strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  .future-content span {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  /* ── CLOSING ── */
+  .closing {
+    padding: 5rem 0 4rem;
+    text-align: center;
+  }
+
+  .closing-quote {
+    font-family: var(--serif);
+    font-size: clamp(18px, 2.5vw, 26px);
+    font-weight: 400;
+    line-height: 1.8;
+    color: var(--text);
+    max-width: 600px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .closing-quote em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .closing-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── CODE ── */
+  code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 2rem;
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    nav { padding: 1rem; }
+    .nav-links { display: none; }
+    .container { padding: 0 1.2rem; }
+    .hero { padding: 100px 0 60px; }
+    .hero::before { display: none; }
+    .phase-trio { grid-template-columns: 1fr; }
+    .phase-item { border-right: none; border-bottom: 0.5px solid var(--border); }
+    .conj-vis { grid-template-columns: 1fr; }
+    .conj-mid { display: none; }
+    .two-col { grid-template-columns: 1fr; }
+    .data-table { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <span class="nav-logo">认知系统论 / 2026</span>
+  <ul class="nav-links">
+    <li><a href="#llm">LLM</a></li>
+    <li><a href="#agent">Agent</a></li>
+    <li><a href="#agi">AGI</a></li>
+    <li><a href="#future">未来</a></li>
+  </ul>
+</nav>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">人机系统 · 认知工程 · 技术哲学</p>
+      <h1>人机共轭<br><em>从 LLM 到 AGI</em> 的三次相位跃迁</h1>
+      <p class="hero-desc">当我们讨论 AI 的未来，真正的问题从来不是"AI 会不会取代人类"，而是：人与 AI 正在形成什么样的新结构？这篇文章用"共轭系统"的视角，重新审视 LLM、Agent、AGI 的演化逻辑。</p>
+      <div class="hero-meta">
+        <span>人机系统分析</span>
+        <span class="hero-meta-dot"></span>
+        <span>约 3000 字</span>
+        <span class="hero-meta-dot"></span>
+        <span>2026</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE TRIO -->
+  <div class="phase-trio">
+    <div class="phase-item phase-p1">
+      <div class="phase-item-bar" style="background:var(--purple)"></div>
+      <div class="phase-num">Phase 01</div>
+      <h3>认知外包</h3>
+      <p>LLM 作为语言压缩器，人类保留思考与决策</p>
+    </div>
+    <div class="phase-item phase-p2">
+      <div class="phase-item-bar" style="background:var(--teal)"></div>
+      <div class="phase-num">Phase 02</div>
+      <h3>执行外包</h3>
+      <p>Agent 接管行动闭环，人类转向目标与监督</p>
+    </div>
+    <div class="phase-item phase-p3">
+      <div class="phase-item-bar" style="background:var(--coral)"></div>
+      <div class="phase-num">Phase 03</div>
+      <h3>认知共生</h3>
+      <p>AGI 阶段，人与 AI 形成双向耦合的新物种生态</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <article class="article">
+
+      <!-- LLM -->
+      <section id="llm" class="section">
+        <div class="section-label">01 — LLM</div>
+        <h2>认知压缩器：语言的大脑</h2>
+        <p>大多数人对 LLM 的第一印象是"更聪明的搜索引擎"或"能写作的机器人"。但这个定义太浅了。从系统结构看，LLM 本质上是一个<strong>概率压缩器</strong>——它把人类几百年积累的语言知识，压缩成了一个高维的 token 分布模型。</p>
+        <p>它能做三件事：把混乱的世界映射成 token 分布；把模糊的意图转化为结构化表达；把人类无法快速提取的知识变成可调用的语言接口。但它有一个根本性的结构缺陷：</p>
+
+        <div class="callout">
+          <strong>核心局限：</strong>LLM 没有目标，没有持续状态，没有行动闭环。每一次对话，它都是"全新的"——没有记忆，没有意志，只有当下的 prompt 和输出。
+        </div>
+
+        <p>这意味着，LLM 阶段的"人机共轭"，是一种强人类主导的耦合关系：</p>
+
+        <div class="conj-vis">
+          <div class="conj-col">
+            <div class="conj-col-label">人类提供</div>
+            <ul>
+              <li>目标与意图</li>
+              <li>判断与筛选</li>
+              <li>世界模型</li>
+              <li>行动决策</li>
+            </ul>
+          </div>
+          <div class="conj-mid">
+            <span class="conj-mid-text">共轭耦合</span>
+          </div>
+          <div class="conj-col">
+            <div class="conj-col-label">LLM 提供</div>
+            <ul>
+              <li>语言表达</li>
+              <li>知识生成</li>
+              <li>结构化输出</li>
+              <li>语言建模</li>
+            </ul>
+          </div>
+        </div>
+
+        <p>本质：<code>Human-in-the-loop cognition</code>。AI 是工具，人是主体。这就像计算器之于数学家——极大地扩展了能力边界，但决策权依然完全在人手中。</p>
+      </section>
+
+      <!-- AGENT -->
+      <section id="agent" class="section">
+        <div class="section-label">02 — Agent</div>
+        <h2>行动化的 LLM：插上循环的引擎</h2>
+        <p>Agent 的出现，是一次真正的结构性突变，而不只是功能升级。其核心变化可以用一个词概括：<strong>行动闭环</strong>。</p>
+        <p>Agent 的经典四件套——感知、记忆、规划、执行——构成了一个真正意义上的自主循环：</p>
+
+        <div class="loop-flow">
+          <span class="loop-node">observe</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">think</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">act</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">feedback</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">update</span>
+          <span class="loop-return">↺ 循环</span>
+        </div>
+
+        <p>从"被动回答"到"主动执行"——这是本质变化。人类不再直接做事，而是开始<strong>管理智能体</strong>。</p>
+
+        <div class="callout">
+          <strong>现实信号：</strong>越来越多的工程师正在转变为 agent manager。他们的核心工作，不再是写代码，而是定义任务、设计工作流、监督 Agent 的输出质量。这是组织结构的真实变化，不是比喻。
+        </div>
+
+        <p>Agent 落地的最大障碍，不是模型智能不够，而是缺乏 context。这个洞察正在重塑整个 AI 工程领域的竞争格局：</p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>阶段</th>
+              <th>类比</th>
+              <th>人类角色</th>
+              <th>核心瓶颈</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>LLM</td>
+              <td>一个天才顾问</td>
+              <td>使用者</td>
+              <td>表达意图的精准度</td>
+            </tr>
+            <tr>
+              <td>单 Agent</td>
+              <td>一名员工</td>
+              <td>管理者</td>
+              <td>任务边界与系统集成</td>
+            </tr>
+            <tr>
+              <td>Multi-Agent</td>
+              <td>一家公司</td>
+              <td>CEO / 架构师</td>
+              <td>协作协议与权责分工</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>多 Agent 协作，正在成为 AI 的"微服务革命"。就像软件工程从单体架构走向微服务，AI 系统也在经历同样的组织化演变——分工、通信、协调，一套新的"AI 组织论"正在形成。</p>
+      </section>
+
+      <!-- AGI -->
+      <section id="agi" class="section">
+        <div class="section-label">03 — AGI</div>
+        <h2>共轭系统的稳定态</h2>
+        <p>谈到 AGI，大多数人的第一反应是"一个无所不能的超级 AI"。但这个想象是错的——或者说，它描述的不是最有意义的那种 AGI。</p>
+        <p>从人机共轭的视角看，AGI 不是一个"能力阈值"，而是一个<strong>系统结构稳定态</strong>。它由三个条件共同定义：</p>
+
+        <ul class="agi-list">
+          <li class="agi-item">
+            <span class="agi-num">01</span>
+            <div class="agi-content">
+              <strong>泛化能力（Generalization）</strong>
+              <span>能跨任务迁移，而不是只能在特定领域表现优秀。就像人类能把"项目管理经验"迁移到"组织家庭旅行"，AGI 需要有这种跨域的认知弹性。这不仅是技术难题，也是认知结构上的根本性挑战。</span>
+            </div>
+          </li>
+          <li class="agi-item">
+            <span class="agi-num">02</span>
+            <div class="agi-content">
+              <strong>自主闭环（Autonomy）</strong>
+              <span>能长期目标驱动，而不是单次对话结束就"遗忘"。这要求持续的记忆、自我校正机制，以及对长周期任务的规划能力。这一层是从 Agent 到 AGI 的核心跨越。</span>
+            </div>
+          </li>
+          <li class="agi-item">
+            <span class="agi-num">03</span>
+            <div class="agi-content">
+              <strong>社会协作（Social Intelligence）</strong>
+              <span>这往往是被低估的第三条——AGI 需要理解人类的意图、价值观、社会规范，并在人与 AI 组成的混合系统中有效协作。没有这一条，再强的推理能力也无法融入真实世界。学界的共识越来越清晰：AI 的未来是"协作智能"，不是"替代智能"。</span>
+            </div>
+          </li>
+        </ul>
+
+        <div class="callout">
+          <strong>重要预判：</strong>AGI 不会是某个"爆发的时刻"，而是一种渐进式渗透——就像电力当年改变了工厂、医院、家庭，AGI 会悄悄地重塑每一个认知密集型场景，直到某天我们回头才意识到：世界已经不同了。
+        </div>
+      </section>
+
+      <!-- BIDIRECTIONAL -->
+      <section class="section">
+        <div class="section-label">04 — 双向动态</div>
+        <h2>一个更深的问题：谁在学习谁？</h2>
+        <p>共轭系统里有一个常被忽视的动态：耦合是双向的。我们以为是人在使用 AI，但实际上这个系统的影响是对称的。</p>
+
+        <div class="two-col">
+          <div class="two-box">
+            <div class="two-box-label">
+              <span class="arrow-badge">→</span>
+              人类输入给 AI
+            </div>
+            <ul>
+              <li>训练数据与反馈</li>
+              <li>目标与价值约束</li>
+              <li>真实世界的 context</li>
+            </ul>
+          </div>
+          <div class="two-box">
+            <div class="two-box-label">
+              <span class="arrow-badge">→</span>
+              AI 反作用于人类
+            </div>
+            <ul>
+              <li>改变思维方式</li>
+              <li>改变决策结构</li>
+              <li>改变组织形态</li>
+            </ul>
+          </div>
+        </div>
+
+        <p>更耐人寻味的是：<strong>人类本身，正在被"Agent 化"</strong>。</p>
+        <p>Prompt 工程让我们开始把思维模块化——把复杂问题分解成可供 AI 处理的子任务。多 Agent 协作的范式，让人类团队也开始更清晰地分角色、定接口。工具调用的逻辑，让人类越来越扮演 orchestration layer 的角色——不再亲手执行，而是协调和整合。</p>
+
+        <div class="callout">
+          这不是隐喻，而是真实发生的认知迁移。AI 改变了人类组织信息、分配注意力、做出决策的底层方式。我们在训练 AI 的同时，AI 也在重塑我们的认知习惯。
+        </div>
+      </section>
+
+      <!-- FUTURE -->
+      <section id="future" class="section">
+        <div class="section-label">05 — 未来十年</div>
+        <h2>四个关键分叉</h2>
+        <p>不是预言，而是基于当前结构趋势的合理推断。这四个方向，将决定下一个十年人机共轭系统的形态。</p>
+
+        <ul class="future-list">
+          <li class="future-item">
+            <span class="future-num">01</span>
+            <div class="future-content">
+              <strong>LLM 退居内核，像 CPU 一样 invisible</strong>
+              <span>底层推理能力会成为基础设施，竞争的焦点从模型能力本身，转向谁能更好地把能力组织成系统。能力的商品化，将让工程设计成为真正的差异化壁垒。</span>
+            </div>
+          </li>
+          <li class="future-item">
+            <span class="future-num">02</span>
+            <div class="future-content">
+              <strong>Agent 成为主战场，系统设计取代模型竞赛</strong>
+              <span>下一个十年，真正的壁垒不是谁的模型更聪明，而是谁设计了更好的 Agent 架构、工作流和协作协议。这意味着系统思维、组织设计能力将比算法调优更有价值。</span>
+            </div>
+          </li>
+          <li class="future-item">
+            <span class="future-num">03</span>
+            <div class="future-content">
+              <strong>AGI 以渗透的方式到来，而非爆炸</strong>
+              <span>不要等待某个"奇点时刻"。AGI 更像电力——它会在你没注意到的地方悄悄改变一切，直到无处不在。历史上每一次重大技术跃迁，都是这种悄无声息的蔓延，而非单一戏剧性事件。</span>
+            </div>
+          </li>
+          <li class="future-item">
+            <span class="future-num">04</span>
+            <div class="future-content">
+              <strong>最稀缺资源：对人类意图的建模能力</strong>
+              <span>能不能说清楚目标？能不能定义 reward？能不能设计约束条件？这些"人类侧"的能力，将成为 AI 时代真正的核心竞争力。技术会普及，但精确建模人类意图的能力，将长期稀缺。</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+    </article>
+  </div>
+
+  <!-- CLOSING -->
+  <div class="container">
+    <div class="closing">
+      <p class="closing-quote">LLM 是语言的大脑，Agent 是行动的身体，<br>而 <em>AGI 是人与 AI 共同形成的</em>——新物种生态。</p>
+      <p class="closing-sub">真正的问题从未是替代，而是：我们将如何共同演化？</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>人机共轭 · 认知系统分析</span>
+  <span>2026</span>
+</footer>
+
+<script>
+  // Progress bar
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    document.getElementById('progress').style.width = pct + '%';
+  });
+
+  // Intersection observer for section reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.section').forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
