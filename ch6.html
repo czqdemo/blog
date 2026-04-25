@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共轭系统的失稳条件｜什么时候，人机协同一定比单独更差？</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --bg2: #f2f0eb;
+    --bg3: #eceae4;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #111009;
+    --text2: #3a3830;
+    --text3: #807d76;
+    --accent: #5a4ea0;
+    --purple: #5a4ea0;
+    --teal: #2e7d5e;
+    --coral: #b5622a;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Noto Serif SC', serif;
+    --sans: 'Noto Sans SC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+  }
+  #progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 0;
+    background: var(--accent);
+    z-index: 100;
+    transition: width 0.1s linear;
+  }
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250,249,246,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .nav-logo,
+  .nav-links a,
+  .hero-meta,
+  .section-label,
+  .item-num,
+  .check-num,
+  footer {
+    font-family: var(--mono);
+  }
+  .nav-logo {
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+  }
+  .nav-links a {
+    font-size: 11px;
+    text-decoration: none;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 0.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: 'STABILITY';
+    position: absolute;
+    top: 82px;
+    right: -35px;
+    font-family: var(--mono);
+    font-size: 112px;
+    color: rgba(0,0,0,0.04);
+    letter-spacing: -0.05em;
+    white-space: nowrap;
+  }
+  .hero-eyebrow {
+    margin-bottom: 1.5rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+  h1 {
+    margin-bottom: 1.5rem;
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.35;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.2s forwards;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .hero-desc {
+    max-width: 640px;
+    margin-bottom: 2rem;
+    color: var(--text2);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.3s forwards;
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.4s forwards;
+  }
+  .meta-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .summary-card {
+    padding: 2rem 1.5rem;
+    border-right: 0.5px solid var(--border);
+  }
+  .summary-card:last-child { border-right: none; }
+  .summary-card:hover { background: var(--bg2); }
+  .summary-bar {
+    width: 24px;
+    height: 2px;
+    margin-bottom: 1rem;
+    border-radius: 1px;
+  }
+  .summary-num {
+    margin-bottom: 0.6rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  .summary-card h3 {
+    margin-bottom: 0.4rem;
+    font-family: var(--serif);
+    font-size: 17px;
+  }
+  .summary-card p,
+  .section p,
+  .item-body span,
+  .check-body span {
+    color: var(--text2);
+  }
+  .section {
+    padding: 5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .section-label::after {
+    content: '';
+    width: 60px;
+    height: 0.5px;
+    background: var(--border);
+  }
+  .section h2 {
+    margin-bottom: 1.5rem;
+    font-family: var(--serif);
+    font-size: 26px;
+    line-height: 1.4;
+  }
+  .callout {
+    margin: 2rem 0;
+    padding: 1.2rem 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    color: var(--text2);
+  }
+  .callout strong { color: var(--accent); }
+  .formula {
+    margin: 2rem 0;
+    padding: 1.8rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .formula-main {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.9;
+  }
+  .item-list,
+  .check-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+  .item,
+  .check-item {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1.4rem 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .item:last-child,
+  .check-item:last-child { border-bottom: none; }
+  .item-num,
+  .check-num {
+    padding-top: 2px;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .item-body strong,
+  .check-body strong {
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+  .closing {
+    padding: 5rem 0 4rem;
+    text-align: center;
+  }
+  .closing-quote {
+    max-width: 700px;
+    margin: 0 auto 1.5rem;
+    font-family: var(--serif);
+    font-size: clamp(18px, 2.4vw, 26px);
+    line-height: 1.8;
+  }
+  .closing-quote em { font-style: normal; color: var(--accent); }
+  .closing-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  footer {
+    padding: 2rem;
+    display: flex;
+    justify-content: space-between;
+    border-top: 0.5px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 640px) {
+    nav { padding: 1rem; }
+    .nav-links { display: none; }
+    .container { padding: 0 1.2rem; }
+    .hero { padding: 100px 0 60px; }
+    .hero::before { display: none; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .summary-card { border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav>
+  <span class="nav-logo">Conjugate Systems / 2026</span>
+  <ul class="nav-links">
+    <li><a href="#criterion">判据</a></li>
+    <li><a href="#scenes">场景</a></li>
+    <li><a href="#checklist">Checklist</a></li>
+    <li><a href="#closing">收束</a></li>
+  </ul>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">System Criteria · Nonlinear Amplifier · Human-AI Coupling</p>
+      <h1>共轭系统的失稳条件<br><em>什么时候，人机协同一定比单独更差？</em></h1>
+      <p class="hero-desc">人机协同不是单调增益，而是一个有条件的函数。在某些结构下，引入 AI 不会让系统更好，反而会系统性退化。关键不在能力上限，而在意图、context、反馈与复杂度之间的稳定关系。</p>
+      <div class="hero-meta">
+        <span>篇 06</span>
+        <span class="meta-dot"></span>
+        <span>稳定性判据</span>
+        <span class="meta-dot"></span>
+        <span>2026</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-bar" style="background: var(--teal);"></div>
+      <div class="summary-num">Condition 01</div>
+      <h3>控制能力不足</h3>
+      <p>目标、状态与反馈不足以约束系统自由度，协同就会失稳。</p>
+    </div>
+    <div class="summary-card">
+      <div class="summary-bar" style="background: var(--coral);"></div>
+      <div class="summary-num">Condition 02</div>
+      <h3>AI 是放大器</h3>
+      <p>它不会自动修复混乱，反而会把原本的问题加速放大。</p>
+    </div>
+    <div class="summary-card">
+      <div class="summary-bar" style="background: var(--purple);"></div>
+      <div class="summary-num">Condition 03</div>
+      <h3>自动化先看可控性</h3>
+      <p>不是所有问题都该交给 Agent，先判断是否满足稳定条件。</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <section id="criterion" class="section">
+      <div class="section-label">01 — 判据</div>
+      <h2>我们需要一个最小的“失稳判据”</h2>
+      <p>这篇的目标不是继续描述现象，而是给一个判断工具。真正需要问的问题是：什么情况下，你应该先不要用 AI，而不是盲目把流程自动化。</p>
+      <div class="formula">
+        <div class="formula-main">
+          System Stability ∝<br>
+          Intent Clarity × Context Coherence × Feedback Quality<br>
+          ÷<br>
+          System Complexity
+        </div>
+      </div>
+      <p>这个式子的关键在于，分子代表系统的控制能力，分母代表系统的自由度。当控制能力小于复杂度时，系统就会失稳。</p>
+      <div class="callout">
+        <strong>核心反转：</strong>自动化的前提不是“AI 能不能做”，而是“这个系统能不能被控制”。
+      </div>
+    </section>
+
+    <section id="scenes" class="section">
+      <div class="section-label">02 — 必然失稳</div>
+      <h2>四种几乎注定变差的场景</h2>
+      <ul class="item-list">
+        <li class="item">
+          <span class="item-num">01</span>
+          <div class="item-body">
+            <strong>意图不闭合</strong>
+            <span>目标在移动、评价标准不稳定、用户自己仍在探索。AI 优化的是一个不断变化的对象，这时更适合探索辅助，而不是委托执行。</span>
+          </div>
+        </li>
+        <li class="item">
+          <span class="item-num">02</span>
+          <div class="item-body">
+            <strong>Context 不一致</strong>
+            <span>多来源信息互相冲突、历史状态不可靠、数据更新滞后。系统在一个分裂世界中决策，引入 AI 只会放大错误。</span>
+          </div>
+        </li>
+        <li class="item">
+          <span class="item-num">03</span>
+          <div class="item-body">
+            <strong>反馈延迟或失真</strong>
+            <span>结果很久以后才验证，或者人类根本无法判断对错。没有及时、准确的反馈，系统不会收敛，只会朝错误方向稳定偏移。</span>
+          </div>
+        </li>
+        <li class="item">
+          <span class="item-num">04</span>
+          <div class="item-body">
+            <strong>系统复杂度过高</strong>
+            <span>多 Agent、多工具、多轮交互、多状态一起叠加时，自由度爆炸。AI 在这里不是解法，更像不稳定系统里的额外放大器。</span>
+          </div>
+        </li>
+      </ul>
+      <div class="callout">
+        <strong>统一解释：</strong>当系统的不确定性超过可控性时，引入 AI 会让情况更差，而且往往不是一点点变差，而是系统性退化。
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-label">03 — 放大器</div>
+      <h2>一个更狠的视角：AI 是非线性放大器</h2>
+      <p>很多人把 AI 当作“万能补丁”，但从系统论看，它更像一个非线性放大器。清晰的意图会被放大成效率，混乱的意图会被放大成更快的混乱；好的反馈被放大成稳定，差的反馈被放大成更快的崩溃。</p>
+      <p>所以 AI 不创造问题，它放大问题。真正危险的误区是：系统越复杂，团队越想加更多 AI 去“智能化”。这本质上是在不稳定系统里继续增加自由度。</p>
+    </section>
+
+    <section id="checklist" class="section">
+      <div class="section-label">04 — 判断表</div>
+      <h2>在引入 AI 之前，先问自己四个问题</h2>
+      <ul class="check-list">
+        <li class="check-item">
+          <span class="check-num">Q1</span>
+          <div class="check-body">
+            <strong>目标是否稳定？</strong>
+            <span>如果目标不断变化，系统就在追一个移动靶。</span>
+          </div>
+        </li>
+        <li class="check-item">
+          <span class="check-num">Q2</span>
+          <div class="check-body">
+            <strong>Context 是否一致？</strong>
+            <span>如果状态来源互相矛盾，任何推理都会建立在裂开的地基上。</span>
+          </div>
+        </li>
+        <li class="check-item">
+          <span class="check-num">Q3</span>
+          <div class="check-body">
+            <strong>反馈是否及时且准确？</strong>
+            <span>没有反馈，系统就不具备修正自己的能力。</span>
+          </div>
+        </li>
+        <li class="check-item">
+          <span class="check-num">Q4</span>
+          <div class="check-body">
+            <strong>复杂度是否可控？</strong>
+            <span>如果系统自由度已经过高，再引入 Agent 通常是风险叠加而不是风险对冲。</span>
+          </div>
+        </li>
+      </ul>
+      <div class="callout">
+        <strong>简单规则：</strong>如果这四个问题里有两个以上的答案是否定的，就先不要上 Agent。
+      </div>
+    </section>
+
+    <section id="closing" class="section">
+      <div class="section-label">05 — 收束</div>
+      <h2>不是所有问题都该被自动化</h2>
+      <p>这一篇真正要说的是：自动化的前提，不是能力，而是可控性。有些事情不是不能做，而是不该让系统去做。把不可控的问题自动化，只会让错误更快、更大、更难收回。</p>
+      <div class="callout">
+        <strong>留一个裂缝：</strong>如果 AI 是放大器，那么谁来决定它放大的到底是什么？如果被放大的是偏见、错误和噪声，系统优化的还是“正确”吗？
+      </div>
+    </section>
+
+    <div class="closing">
+      <p class="closing-quote">人机协同从来不是默认增益，<br><em>只有在可控条件下，它才值得被自动化</em>。</p>
+      <p class="closing-sub">Stability Before Automation</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>共轭系统的失稳条件</span>
+  <span>2026</span>
+</footer>
+
+<script>
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    document.getElementById('progress').style.width = pct + '%';
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.section').forEach((section) => observer.observe(section));
+</script>
+</body>
+</html>

@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>意图是新的稀缺资源｜为什么“说清楚你要什么”，比“AI 有多聪明”更重要</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --bg2: #f2f0eb;
+    --bg3: #eceae4;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #111009;
+    --text2: #3a3830;
+    --text3: #807d76;
+    --accent: #2e7d5e;
+    --accent2: #b5622a;
+    --accent3: #5a4ea0;
+    --purple: #5a4ea0;
+    --teal: #2e7d5e;
+    --coral: #b5622a;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Noto Serif SC', serif;
+    --sans: 'Noto Sans SC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 400;
+    line-height: 1.8;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    width: 0%;
+    z-index: 100;
+    transition: width 0.1s linear;
+  }
+
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250,249,246,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 0.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: 'INTENT';
+    position: absolute;
+    right: -20px;
+    top: 80px;
+    font-family: var(--mono);
+    font-size: 140px;
+    font-weight: 500;
+    color: rgba(0,0,0,0.04);
+    letter-spacing: -0.05em;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.2s forwards;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    color: var(--text2);
+    max-width: 600px;
+    line-height: 1.9;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.3s forwards;
+  }
+
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.4s forwards;
+  }
+
+  .hero-meta-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+
+  .phase-trio {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.5s forwards;
+  }
+
+  .phase-item {
+    padding: 2rem 1.5rem;
+    border-right: 0.5px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  .phase-item:last-child { border-right: none; }
+  .phase-item:hover { background: var(--bg2); }
+
+  .phase-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.1em;
+  }
+
+  .phase-item h3 {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  .phase-item p {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .phase-item-bar {
+    height: 2px;
+    width: 24px;
+    margin-bottom: 1rem;
+    border-radius: 1px;
+  }
+
+  .article { padding: 0; }
+
+  .section {
+    padding: 5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 0.5px;
+    background: var(--border);
+    max-width: 60px;
+  }
+
+  .section h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+  }
+
+  .section p {
+    font-size: 16px;
+    color: var(--text2);
+    line-height: 1.9;
+    margin-bottom: 1.2rem;
+    font-weight: 400;
+  }
+
+  strong { font-weight: 600; color: var(--text); }
+
+  .callout {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-left: 2px solid var(--accent);
+    padding: 1.2rem 1.5rem;
+    margin: 2rem 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.8;
+  }
+
+  .callout strong { color: var(--accent); }
+
+  .agi-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+
+  .agi-item {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    align-items: start;
+  }
+
+  .agi-item:last-child { border-bottom: none; }
+
+  .agi-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text3);
+    padding-top: 3px;
+  }
+
+  .agi-content strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  .agi-content span {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  .future-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+
+  .future-item {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    align-items: start;
+  }
+
+  .future-item:last-child { border-bottom: none; }
+
+  .future-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+
+  .future-content strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  .future-content span {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  .loop-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .loop-node {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    padding: 6px 14px;
+    border: 0.5px solid var(--border2);
+    border-radius: 20px;
+    background: var(--bg3);
+    white-space: nowrap;
+  }
+
+  .loop-arrow {
+    color: var(--text3);
+    font-size: 14px;
+    font-family: var(--mono);
+  }
+
+  .loop-return {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-left: auto;
+  }
+
+  .closing {
+    padding: 5rem 0 4rem;
+    text-align: center;
+  }
+
+  .closing-quote {
+    font-family: var(--serif);
+    font-size: clamp(18px, 2.5vw, 26px);
+    font-weight: 400;
+    line-height: 1.8;
+    color: var(--text);
+    max-width: 680px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .closing-quote em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .closing-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  footer {
+    padding: 2rem;
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 640px) {
+    nav { padding: 1rem; }
+    .nav-links { display: none; }
+    .container { padding: 0 1.2rem; }
+    .hero { padding: 100px 0 60px; }
+    .hero::before { display: none; }
+    .phase-trio { grid-template-columns: 1fr; }
+    .phase-item { border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <span class="nav-logo">意图建模 / 2026</span>
+  <ul class="nav-links">
+    <li><a href="#start">起点</a></li>
+    <li><a href="#bottleneck">瓶颈</a></li>
+    <li><a href="#structure">结构</a></li>
+    <li><a href="#levels">分层</a></li>
+    <li><a href="#closing">收束</a></li>
+  </ul>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">AI 工程 · 意图建模 · 认知分层</p>
+      <h1>意图是新的稀缺资源<br><em>“说清楚你要什么”</em> 比 “AI 有多聪明” 更重要</h1>
+      <p class="hero-desc">模型越来越强，但系统并没有按比例变好。瓶颈正在从“模型能力”迁移到“上下文与意图表达”。当执行被外包给 AI，过去由人类隐式承担的目标、约束、权衡与失败模式，必须显式化。</p>
+      <div class="hero-meta">
+        <span>篇 02</span>
+        <span class="hero-meta-dot"></span>
+        <span>约 2500 字</span>
+        <span class="hero-meta-dot"></span>
+        <span>2026</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="phase-trio">
+    <div class="phase-item">
+      <div class="phase-item-bar" style="background:var(--teal)"></div>
+      <div class="phase-num">Shift 01</div>
+      <h3>瓶颈转移</h3>
+      <p>从“模型够不够强”转向“系统有没有足够的上下文与意图”</p>
+    </div>
+    <div class="phase-item">
+      <div class="phase-item-bar" style="background:var(--coral)"></div>
+      <div class="phase-num">Shift 02</div>
+      <h3>意图结构化</h3>
+      <p>意图不是一句 prompt，而是可计算、可传递、可约束的表达</p>
+    </div>
+    <div class="phase-item">
+      <div class="phase-item-bar" style="background:var(--purple)"></div>
+      <div class="phase-num">Shift 03</div>
+      <h3>权力问题</h3>
+      <p>当系统能执行时，谁定义“它到底在执行什么”？</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <article class="article">
+
+      <section id="start" class="section">
+        <div class="section-label">01 — 起点</div>
+        <h2>一个反直觉的起点：模型更强，系统未必更好</h2>
+        <p>现在关于 AI 的主流叙事几乎都在问一个问题：模型够不够强？更大的参数、更长的 context、更低的 cost、更强的推理。</p>
+        <p>但如果把视角稍微拧一下，会看到一个诡异的现象：模型越来越强，但系统却没有按比例变好。甚至在很多真实场景里，情况更糟：demo 很惊艳，production 很脆弱；输出“看起来对”，但实际上错。</p>
+        <div class="callout">
+          <strong>结构性信号：</strong>这不是“还不够聪明”的问题，而是“系统结构没有补齐”的问题。
+        </div>
+      </section>
+
+      <section id="bottleneck" class="section">
+        <div class="section-label">02 — 瓶颈</div>
+        <h2>瓶颈已经发生转移：从模型能力到上下文与意图</h2>
+        <p>如果观察近一年的工程实践，会发现一个逐渐清晰的结论：AI 的瓶颈，正在从“模型能力”转移到“上下文与意图”。</p>
+        <p>更直白一点：AI 不笨，只是“看不见你脑子里的东西”。</p>
+        <div class="callout">
+          <strong>一个更底层的说法：</strong>很多人以为自己有意图，其实没有。他们往往只有模糊目标、结果导向或情绪表达，却缺少可计算、可传递、可约束的意图结构。
+        </div>
+        <p>换句话说：你不是不会用 AI，你是无法描述自己想要什么。</p>
+      </section>
+
+      <section id="structure" class="section">
+        <div class="section-label">03 — 结构</div>
+        <h2>意图不是一句 prompt，而是一个结构</h2>
+        <p>这里是核心：<strong>意图 ≠ prompt</strong>。意图是目标、约束、权衡、边界条件的组合。</p>
+        <p>可以把它写成一个“最小意图表达式”：<code>Intent = (Goal, Constraints, Trade-offs, Failure Modes)</code>。</p>
+
+        <ul class="agi-list">
+          <li class="agi-item">
+            <span class="agi-num">01</span>
+            <div class="agi-content">
+              <strong>Goal（目标）</strong>
+              <span>不是“写一篇文章”，而是写给谁、想改变什么、处在什么语境下。目标越具体，系统越能稳定对齐。</span>
+            </div>
+          </li>
+          <li class="agi-item">
+            <span class="agi-num">02</span>
+            <div class="agi-content">
+              <strong>Constraints（约束）</strong>
+              <span>长度、风格、必须包含什么、不能出现什么。约束不是限制创造力，而是把搜索空间缩到可控范围。</span>
+            </div>
+          </li>
+          <li class="agi-item">
+            <span class="agi-num">03</span>
+            <div class="agi-content">
+              <strong>Trade-offs（权衡）</strong>
+              <span>更严谨 vs 更易读、更创新 vs 更安全、更完整 vs 更快速。没有 trade-off，就没有真正的决策。</span>
+            </div>
+          </li>
+          <li class="agi-item">
+            <span class="agi-num">04</span>
+            <div class="agi-content">
+              <strong>Failure Modes（失败模式）</strong>
+              <span>什么情况算“看起来对但其实错”？哪些错误不可接受，哪些可以容忍？这是最常被遗漏，却最能决定可用性的部分。</span>
+            </div>
+          </li>
+        </ul>
+
+        <div class="callout">
+          <strong>为什么这在 AI 时代突然变重要？</strong>过去这部分由人类隐式承担；当执行被外包给 AI，这些隐式意图必须显式化，否则 AI 会“完美执行一个你其实不想要的目标”。
+        </div>
+        <p>很多人觉得 AI 不稳定，但从系统视角看，更接近事实的是：人类的意图表达本来就不稳定，AI 只是把这个问题放大了。</p>
+      </section>
+
+      <section id="levels" class="section">
+        <div class="section-label">04 — 分层</div>
+        <h2>意图能力 = 新的认知分层</h2>
+        <p>未来人群不会按“会不会用 AI”分层，而会按“能不能稳定地表达并更新意图”分层。</p>
+
+        <ul class="future-list">
+          <li class="future-item">
+            <span class="future-num">L1</span>
+            <div class="future-content">
+              <strong>指令型用户</strong>
+              <span>给 prompt，看结果，不满意就重试，体验更像抽卡。</span>
+            </div>
+          </li>
+          <li class="future-item">
+            <span class="future-num">L2</span>
+            <div class="future-content">
+              <strong>约束型用户</strong>
+              <span>会加条件，会修 prompt，能稳定复现结果，开始有工程感。</span>
+            </div>
+          </li>
+          <li class="future-item">
+            <span class="future-num">L3</span>
+            <div class="future-content">
+              <strong>意图建模者（极少数）</strong>
+              <span>能定义目标函数、设计 reward、预判 failure modes、拆解系统行为。他们不是在用 AI，而是在训练一个系统。</span>
+            </div>
+          </li>
+        </ul>
+
+        <p>软件工程正在悄悄改写：写代码 → 描述意图 → 验证执行。AI 提高了生成速度，但交付瓶颈转移到验证与系统设计。这不是效率问题，是范式问题。</p>
+      </section>
+
+      <section id="diagram" class="section">
+        <div class="section-label">05 — 骨架</div>
+        <h2>系统真正卡在哪里？</h2>
+        <p>你可以把整个系统骨架画成一条链：从人类意图空间出发，经历表达、映射、执行、反馈，再回到意图更新。</p>
+
+        <div class="loop-flow">
+          <span class="loop-node">Human Intent Space</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Prompt / Spec</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Latent Representation</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Actions</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Observed Outcome</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Intent Update</span>
+          <span class="loop-return">↺ 循环</span>
+        </div>
+
+        <div class="callout">
+          <strong>关键点：</strong>系统不是卡在 LLM，而是卡在 <code>Human Intent Space → Prompt</code> 这一段：意图如何被压缩、表达、约束与校验。
+        </div>
+      </section>
+
+      <section id="closing" class="section">
+        <div class="section-label">06 — 收束</div>
+        <h2>当 AI 能执行的时候，谁在控制系统？</h2>
+        <p>当 AI 能执行的时候，真正的问题变成：谁定义它在执行什么？这就是为什么“意图”会变成新的稀缺资源。</p>
+        <p>不是因为它更难，而是因为以前不需要你做的事，现在必须你来做。</p>
+        <div class="callout">
+          <strong>留一个裂缝：</strong>如果意图建模成为核心能力，会出现一个更深的问题：谁拥有“定义他人意图”的权力？平台、公司、Agent 系统，还是用户自己？如果你的意图是被“建议出来的”，那它还算是你的意图吗？
+        </div>
+      </section>
+
+    </article>
+  </div>
+
+  <div class="container">
+    <div class="closing">
+      <p class="closing-quote">当执行被外包给 AI，<br><em>意图就必须显式化</em>：目标、约束、权衡与失败模式。</p>
+      <p class="closing-sub">模型会继续变强，但稀缺的将是“把系统对齐到你真正想要的东西”的能力。</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>意图建模 · 系统对齐</span>
+  <span>2026</span>
+</footer>
+
+<script>
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    document.getElementById('progress').style.width = pct + '%';
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.section').forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

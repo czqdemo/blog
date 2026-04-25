@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>语境的重量｜Context 不是参数，是认知基础设施</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --bg2: #f2f0eb;
+    --bg3: #eceae4;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #111009;
+    --text2: #3a3830;
+    --text3: #807d76;
+    --accent: #5a4ea0;
+    --accent2: #2e7d5e;
+    --accent3: #b5622a;
+    --purple: #5a4ea0;
+    --teal: #2e7d5e;
+    --coral: #b5622a;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Noto Serif SC', serif;
+    --sans: 'Noto Sans SC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 400;
+    line-height: 1.8;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    width: 0%;
+    z-index: 100;
+    transition: width 0.1s linear;
+  }
+
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250,249,246,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 0.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: 'CONTEXT';
+    position: absolute;
+    right: -20px;
+    top: 80px;
+    font-family: var(--mono);
+    font-size: 120px;
+    font-weight: 500;
+    color: rgba(0,0,0,0.04);
+    letter-spacing: -0.05em;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.2s forwards;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    color: var(--text2);
+    max-width: 620px;
+    line-height: 1.9;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.3s forwards;
+  }
+
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.4s forwards;
+  }
+
+  .hero-meta-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+
+  .phase-trio {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.5s forwards;
+  }
+
+  .phase-item {
+    padding: 2rem 1.5rem;
+    border-right: 0.5px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  .phase-item:last-child { border-right: none; }
+  .phase-item:hover { background: var(--bg2); }
+
+  .phase-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.1em;
+  }
+
+  .phase-item h3 {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  .phase-item p {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .phase-item-bar {
+    height: 2px;
+    width: 24px;
+    margin-bottom: 1rem;
+    border-radius: 1px;
+  }
+
+  .article { padding: 0; }
+
+  .section {
+    padding: 5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 0.5px;
+    background: var(--border);
+    max-width: 60px;
+  }
+
+  .section h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+  }
+
+  .section p {
+    font-size: 16px;
+    color: var(--text2);
+    line-height: 1.9;
+    margin-bottom: 1.2rem;
+    font-weight: 400;
+  }
+
+  strong { font-weight: 600; color: var(--text); }
+
+  .callout {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-left: 2px solid var(--accent);
+    padding: 1.2rem 1.5rem;
+    margin: 2rem 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.8;
+  }
+
+  .callout strong { color: var(--accent); }
+
+  .agi-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+
+  .agi-item {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    align-items: start;
+  }
+
+  .agi-item:last-child { border-bottom: none; }
+
+  .agi-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text3);
+    padding-top: 3px;
+  }
+
+  .agi-content strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  .agi-content span {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  .future-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+
+  .future-item {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    align-items: start;
+  }
+
+  .future-item:last-child { border-bottom: none; }
+
+  .future-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+
+  .future-content strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  .future-content span {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  .loop-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .loop-node {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    padding: 6px 14px;
+    border: 0.5px solid var(--border2);
+    border-radius: 20px;
+    background: var(--bg3);
+    white-space: nowrap;
+  }
+
+  .loop-arrow {
+    color: var(--text3);
+    font-size: 14px;
+    font-family: var(--mono);
+  }
+
+  .loop-return {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-left: auto;
+  }
+
+  .closing {
+    padding: 5rem 0 4rem;
+    text-align: center;
+  }
+
+  .closing-quote {
+    font-family: var(--serif);
+    font-size: clamp(18px, 2.5vw, 26px);
+    font-weight: 400;
+    line-height: 1.8;
+    color: var(--text);
+    max-width: 720px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .closing-quote em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .closing-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  footer {
+    padding: 2rem;
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 640px) {
+    nav { padding: 1rem; }
+    .nav-links { display: none; }
+    .container { padding: 0 1.2rem; }
+    .hero { padding: 100px 0 60px; }
+    .hero::before { display: none; }
+    .phase-trio { grid-template-columns: 1fr; }
+    .phase-item { border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <span class="nav-logo">语境工程 / 2026</span>
+  <ul class="nav-links">
+    <li><a href="#word">词</a></li>
+    <li><a href="#rot">腐化</a></li>
+    <li><a href="#definition">定义</a></li>
+    <li><a href="#diagram">结构图</a></li>
+    <li><a href="#closing">收束</a></li>
+  </ul>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">Context Engineering · 认知基础设施 · 系统架构</p>
+      <h1>语境的重量<br><em>Context</em> 不是参数，是认知基础设施</h1>
+      <p class="hero-desc">很多人把 context 理解成“窗口大小”，以为 1M tokens 就意味着更聪明。但工程现实更接近：世界变大了，AI 更迷路了。真正的分水岭不在窗口长度，而在语境的筛选、组织、更新与遗忘——也就是 context system。</p>
+      <div class="hero-meta">
+        <span>篇 03</span>
+        <span class="hero-meta-dot"></span>
+        <span>约 2300 字</span>
+        <span class="hero-meta-dot"></span>
+        <span>2026</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="phase-trio">
+    <div class="phase-item">
+      <div class="phase-item-bar" style="background:var(--teal)"></div>
+      <div class="phase-num">Insight 01</div>
+      <h3>更大 ≠ 更好</h3>
+      <p>context 越长，注意力越稀释，信噪比越低</p>
+    </div>
+    <div class="phase-item">
+      <div class="phase-item-bar" style="background:var(--coral)"></div>
+      <div class="phase-num">Insight 02</div>
+      <h3>语境腐化</h3>
+      <p>信息不断进入，旧信息不压缩淘汰，噪声淹没信号</p>
+    </div>
+    <div class="phase-item">
+      <div class="phase-item-bar" style="background:var(--purple)"></div>
+      <div class="phase-num">Insight 03</div>
+      <h3>系统问题</h3>
+      <p>context 不是模型能力问题，而是信息流与架构设计问题</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <article class="article">
+
+      <section id="word" class="section">
+        <div class="section-label">01 — 一个词</div>
+        <h2>Context 被误解了：不是“窗口”，而是“工作状态”</h2>
+        <p>大多数人听到 “context”，脑子里是 32K、128K、1M tokens，或者“能不能把整个代码库塞进去”。产品也在这么卖：我们支持 1M context window。</p>
+        <p>听起来像是世界变大了，AI 更聪明了。但现实更接近：世界变大了，AI 更迷路了。</p>
+        <div class="callout">
+          <strong>一个致命事实：</strong>模型的“记忆”不是记忆，更像滑动窗口。超出窗口就不存在；在窗口中间权重下降；信息越多注意力越稀释。
+        </div>
+        <p>在长上下文中，信息关注是不均匀的，中间部分更容易被“忽略”。甚至更极端：上下文越长，推理质量可能反而下降，因为信噪比在降低。</p>
+      </section>
+
+      <section id="rot" class="section">
+        <div class="section-label">02 — 退化</div>
+        <h2>Context Rot：语境腐化不是 bug，是系统性退化</h2>
+        <p>你可能已经见过：Agent 一开始很聪明，跑久了开始跑偏，忘记最初目标，做出奇怪决策。这不是偶然，也不只是实现细节问题。</p>
+        <div class="callout">
+          <strong>Context Rot：</strong>新信息不断进入，旧信息没有被压缩或淘汰，噪声逐渐淹没信号。交互越长，context 噪声越累积，推理能力越下降。
+        </div>
+        <p>很多人以为问题是 context 不够大，但更本质的原因是：context 没有结构。</p>
+        <p>把整个代码库、所有日志、所有对话一次性塞给模型，你以为给了“更多信息”，系统视角看却是信息熵爆炸：不相关信息、过时信息、冲突信息混在一起，模型面对的不是更清晰的世界，而是更混乱的输入。</p>
+      </section>
+
+      <section id="definition" class="section">
+        <div class="section-label">03 — 定义</div>
+        <h2>关键反转：Context 不是“多”，而是“对”</h2>
+        <p>我们换一个定义：<strong>Context = 可被模型利用的“有组织信息状态”</strong>。它不是原始数据，不是全量输入，也不是历史记录本身。</p>
+        <p>它是一个经过选择、压缩、排序、结构化的信息子集。</p>
+        <div class="callout">
+          <strong>这意味着：</strong>更大窗口并不能自动生成更好的语境，反而可能降低系统的信噪比。
+        </div>
+        <p>行业也在形成共识：扩大窗口 ≠ 解决问题。原因往往来自三件事：注意力不是线性的；成本与延迟爆炸；更严重的是信噪比下降——工具输出、中间推理、错误尝试全部进入 context，模型被“自己生成的垃圾”淹没。</p>
+      </section>
+
+      <section id="diagram" class="section">
+        <div class="section-label">04 — 结构图</div>
+        <h2>真正的难点在前两步：采样与组织</h2>
+        <p>把 context 当作系统设计问题，你会发现核心断点不在 LLM，而在“世界状态如何被采样与组织”为可用的语境。</p>
+
+        <div class="loop-flow">
+          <span class="loop-node">Raw World State</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Selected Context</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Structured Context</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Token Sequence</span>
+          <span class="loop-arrow">→</span>
+          <span class="loop-node">Latent Reasoning</span>
+          <span class="loop-return">↺ 循环</span>
+        </div>
+
+        <div class="callout">
+          <strong>关键断点：</strong>大多数系统只做了最后两步，但真正的难点在前两步：如何采样、如何组织。
+        </div>
+      </section>
+
+      <section id="engineering" class="section">
+        <div class="section-label">05 — 范式迁移</div>
+        <h2>从 Prompt Engineering 到 Context Engineering</h2>
+        <p>这是一种范式迁移：从写 prompt，变成设计 context；从调模型，变成设计信息流；从优化输出，变成优化认知路径。</p>
+        <p>Context Engineering 关心的是：信息从哪里来、如何筛选、如何更新、如何遗忘。</p>
+        <div class="callout">
+          <strong>一个更狠的视角：</strong>LLM 是推理引擎，Context 是工作记忆，Memory system 是长期记忆。没有 context，LLM 就像一个没有短期记忆的人类。
+        </div>
+        <p>和上一篇连接也很关键：意图定义“做什么”，context 决定“怎么理解这个做什么”。没有 context，意图无法被执行。</p>
+      </section>
+
+      <section id="trend" class="section">
+        <div class="section-label">06 — 分裂</div>
+        <h2>一个危险但真实的趋势：系统会分裂成两类</h2>
+        <p>未来的系统可能分裂成两类：一种是模型驱动，依赖更大模型、更大窗口、更强推理；另一种是 context 驱动，投入 memory、context 管理与信息结构。</p>
+
+        <ul class="future-list">
+          <li class="future-item">
+            <span class="future-num">A</span>
+            <div class="future-content">
+              <strong>模型驱动</strong>
+              <span>更大模型、更大 context、更强推理。短期有效，但长期不稳定，语境腐化风险更高。</span>
+            </div>
+          </li>
+          <li class="future-item">
+            <span class="future-num">B</span>
+            <div class="future-content">
+              <strong>Context 驱动</strong>
+              <span>强 memory 系统、强 context 管理、强信息结构，更接近“可持续智能”。</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section id="closing" class="section">
+        <div class="section-label">07 — 收束</div>
+        <h2>你在构建什么样的“世界”？</h2>
+        <p>当你在做一个 AI 系统时，真正的问题不是模型选哪个，而是：你在给它构建什么样的世界？</p>
+        <div class="callout">
+          <strong>留一个裂缝：</strong>如果 context 是认知基础设施，会出现一个更深的问题：谁控制 context，就在控制“AI 看见的世界”。如果 AI 的“视野”被设计过，它的“判断”还算客观吗？
+        </div>
+        <p>如果说上一篇让人意识到“你不会表达意图”，这一篇要让人意识到：就算你会表达，没有 context 结构，一切依然是噪声。</p>
+      </section>
+
+    </article>
+  </div>
+
+  <div class="container">
+    <div class="closing">
+      <p class="closing-quote">更大的窗口只是更大的输入，<br><em>更好的语境</em> 才是更可靠的认知系统。</p>
+      <p class="closing-sub">Context Engineering · 认知基础设施</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>语境的重量 · Context Engineering</span>
+  <span>2026</span>
+</footer>
+
+<script>
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    document.getElementById('progress').style.width = pct + '%';
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.section').forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

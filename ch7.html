@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模块化思维的代价｜Prompt 工程在训练我们，不只是我们在用工具</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --bg2: #f2f0eb;
+    --bg3: #eceae4;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #111009;
+    --text2: #3a3830;
+    --text3: #807d76;
+    --accent: #b5622a;
+    --purple: #5a4ea0;
+    --teal: #2e7d5e;
+    --coral: #b5622a;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Noto Serif SC', serif;
+    --sans: 'Noto Sans SC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+  }
+  #progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 0;
+    background: var(--accent);
+    z-index: 100;
+    transition: width 0.1s linear;
+  }
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250,249,246,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .nav-logo,
+  .nav-links a,
+  .hero-meta,
+  .section-label,
+  .item-num,
+  footer {
+    font-family: var(--mono);
+  }
+  .nav-logo {
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+  }
+  .nav-links a {
+    font-size: 11px;
+    text-decoration: none;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 0.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: 'MODULAR';
+    position: absolute;
+    top: 84px;
+    right: -24px;
+    font-family: var(--mono);
+    font-size: 118px;
+    color: rgba(0,0,0,0.04);
+    letter-spacing: -0.05em;
+    white-space: nowrap;
+  }
+  .hero-eyebrow {
+    margin-bottom: 1.5rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+  h1 {
+    margin-bottom: 1.5rem;
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.35;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.2s forwards;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .hero-desc {
+    max-width: 650px;
+    margin-bottom: 2rem;
+    color: var(--text2);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.3s forwards;
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.4s forwards;
+  }
+  .meta-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .summary-card {
+    padding: 2rem 1.5rem;
+    border-right: 0.5px solid var(--border);
+  }
+  .summary-card:last-child { border-right: none; }
+  .summary-card:hover { background: var(--bg2); }
+  .summary-bar {
+    width: 24px;
+    height: 2px;
+    margin-bottom: 1rem;
+    border-radius: 1px;
+  }
+  .summary-num {
+    margin-bottom: 0.6rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  .summary-card h3 {
+    margin-bottom: 0.4rem;
+    font-family: var(--serif);
+    font-size: 17px;
+  }
+  .summary-card p,
+  .section p,
+  .item-body span {
+    color: var(--text2);
+  }
+  .section {
+    padding: 5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .section-label::after {
+    content: '';
+    width: 60px;
+    height: 0.5px;
+    background: var(--border);
+  }
+  .section h2 {
+    margin-bottom: 1.5rem;
+    font-family: var(--serif);
+    font-size: 26px;
+    line-height: 1.4;
+  }
+  .callout {
+    margin: 2rem 0;
+    padding: 1.2rem 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    color: var(--text2);
+  }
+  .callout strong { color: var(--accent); }
+  .item-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1.4rem 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .item:last-child { border-bottom: none; }
+  .item-num {
+    padding-top: 2px;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .item-body strong {
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+  .duo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 2rem 0;
+  }
+  .duo-box {
+    padding: 1.2rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+  }
+  .duo-label {
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 0.5px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  .duo-box ul {
+    list-style: none;
+    color: var(--text2);
+  }
+  .duo-box li { padding: 4px 0; }
+  .closing {
+    padding: 5rem 0 4rem;
+    text-align: center;
+  }
+  .closing-quote {
+    max-width: 700px;
+    margin: 0 auto 1.5rem;
+    font-family: var(--serif);
+    font-size: clamp(18px, 2.4vw, 26px);
+    line-height: 1.8;
+  }
+  .closing-quote em { font-style: normal; color: var(--accent); }
+  .closing-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  footer {
+    padding: 2rem;
+    display: flex;
+    justify-content: space-between;
+    border-top: 0.5px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 640px) {
+    nav { padding: 1rem; }
+    .nav-links { display: none; }
+    .container { padding: 0 1.2rem; }
+    .hero { padding: 100px 0 60px; }
+    .hero::before { display: none; }
+    .summary-grid,
+    .duo-grid { grid-template-columns: 1fr; }
+    .summary-card { border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav>
+  <span class="nav-logo">Cognitive Shift / 2026</span>
+  <ul class="nav-links">
+    <li><a href="#training">训练</a></li>
+    <li><a href="#cost">代价</a></li>
+    <li><a href="#reverse">反向共轭</a></li>
+    <li><a href="#closing">收束</a></li>
+  </ul>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">Prompt Engineering · Cognitive Training · Reverse Conjugation</p>
+      <h1>模块化思维的代价<br><em>Prompt 工程在训练我们</em>，不只是我们在用工具</h1>
+      <p class="hero-desc">关于 AI 的讨论通常只看一个方向：人如何使用它。但还有更慢、更隐蔽的一条线正在发生，AI 也在反过来塑造人。Prompt engineering 不只是技巧，它正在训练我们把思维切成模块，并悄悄改变我们理解问题的方式。</p>
+      <div class="hero-meta">
+        <span>篇 07</span>
+        <span class="meta-dot"></span>
+        <span>认知迁移</span>
+        <span class="meta-dot"></span>
+        <span>2026</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-bar" style="background: var(--teal);"></div>
+      <div class="summary-num">Shift 01</div>
+      <h3>Prompt 是认知训练</h3>
+      <p>它训练我们把复杂问题拆成目标、约束、步骤与输出格式。</p>
+    </div>
+    <div class="summary-card">
+      <div class="summary-bar" style="background: var(--coral);"></div>
+      <div class="summary-num">Shift 02</div>
+      <h3>收益伴随代价</h3>
+      <p>模块化让问题更可执行，也让某些问题被过早收敛和接口化。</p>
+    </div>
+    <div class="summary-card">
+      <div class="summary-bar" style="background: var(--purple);"></div>
+      <div class="summary-num">Shift 03</div>
+      <h3>共轭是反向的</h3>
+      <p>不只是人在塑造 AI，AI 也在塑造人的认知结构和问题感。</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <section id="training" class="section">
+      <div class="section-label">01 — 认知训练</div>
+      <h2>Prompt engineering 不是技巧，而是思维重排</h2>
+      <p>当你在写 prompt 时，你以为自己在给指令、控制输出，但实际上你也在做另一件事：把自己的思维切成一组可描述、可执行的块。</p>
+      <p>你开始习惯先定义目标、再列约束、再分步骤、再指定输出格式。这个过程当然高效，也的确让模糊想法更容易进入执行阶段。</p>
+      <div class="callout">
+        <strong>关键反转：</strong>Prompt engineering 之所以流行，不只是因为它能驱动模型，更因为它在训练人类采用一种新的默认思维方式。
+      </div>
+    </section>
+
+    <section id="cost" class="section">
+      <div class="section-label">02 — 代价</div>
+      <h2>模块化思维的力量，也是它的风险</h2>
+      <ul class="item-list">
+        <li class="item">
+          <span class="item-num">01</span>
+          <div class="item-body">
+            <strong>问题被过度结构化</strong>
+            <span>开放问题被改写成 checklist，探索性问题被压缩成步骤，一些本该发散的思考被提前收敛。</span>
+          </div>
+        </li>
+        <li class="item">
+          <span class="item-num">02</span>
+          <div class="item-body">
+            <strong>思维被接口化</strong>
+            <span>我们越来越习惯用“输入 → 输出”的方式看待写作、学习、决策，但世界本身并不是 API。</span>
+          </div>
+        </li>
+        <li class="item">
+          <span class="item-num">03</span>
+          <div class="item-body">
+            <strong>对不确定性的耐受度下降</strong>
+            <span>很多真实问题是模糊、不完整、不可验证的。模块化思维会让人更倾向于回避它们，或者强行把它们简化成可执行格式。</span>
+          </div>
+        </li>
+      </ul>
+      <div class="callout">
+        <strong>更深的代价：</strong>当你越来越擅长“设计推理过程”，你可能也在慢慢失去“在混乱中直接思考”的能力。
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-label">03 — 一个对照</div>
+      <h2>快与深之间，并不是没有代价的交换</h2>
+      <div class="duo-grid">
+        <div class="duo-box">
+          <div class="duo-label">传统思维</div>
+          <ul>
+            <li>在问题中挣扎</li>
+            <li>在不确定中探索</li>
+            <li>在混乱中形成结构</li>
+          </ul>
+        </div>
+        <div class="duo-box">
+          <div class="duo-label">模块化思维</div>
+          <ul>
+            <li>快速定义问题</li>
+            <li>快速拆解结构</li>
+            <li>快速走向执行</li>
+          </ul>
+        </div>
+      </div>
+      <p>前者慢，但可能更深；后者快，但可能更浅。危险不在于我们采用了模块化，而在于我们开始默认“所有问题都应该被模块化”。</p>
+    </section>
+
+    <section id="reverse" class="section">
+      <div class="section-label">04 — 反向共轭</div>
+      <h2>人机共轭不是单向的，而是反向的</h2>
+      <p>整个系列讨论的是人机共轭，这一篇补上一条更锋利的线：共轭不是只有“人塑造 AI”，还有“AI 塑造人”。</p>
+      <p>当人越来越像 prompt 编写器，我们提出问题的方式、忍受模糊的能力、定义世界的习惯，都会逐渐适配系统，而不是让系统适配我们。</p>
+      <div class="callout">
+        <strong>一句升级：</strong>篇 07 的核心不是工具变化，而是主体变化。AI 不只是改变了你的方法，它可能正在改变“你是谁”。
+      </div>
+      <p>更极端一点说，如果一个问题不能被写成 prompt，它会不会在认知层面被慢慢忽略？</p>
+    </section>
+
+    <section id="closing" class="section">
+      <div class="section-label">05 — 收束</div>
+      <h2>你在获得什么，也在失去什么？</h2>
+      <p>当你越来越擅长写 prompt，你可能也正在失去一种能力：在没有现成结构的时候独立思考。这个损失不会立刻显现，但会慢慢影响创造力、判断力和问题定义能力。</p>
+      <div class="callout">
+        <strong>留一个裂缝：</strong>如果未来大多数人都习惯模块化思维，那些无法被模块化的问题，会被谁继续思考？如果一个问题不能写成 prompt，它还会被认真对待吗？
+      </div>
+    </section>
+
+    <div class="closing">
+      <p class="closing-quote">AI 改变的不只是工具链，<br><em>它也在重写人的认知习惯</em>。</p>
+      <p class="closing-sub">Reverse Conjugation</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>模块化思维的代价</span>
+  <span>2026</span>
+</footer>
+
+<script>
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    document.getElementById('progress').style.width = pct + '%';
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.section').forEach((section) => observer.observe(section));
+</script>
+</body>
+</html>

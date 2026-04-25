@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent 为什么总在 demo 阶段死｜不是能力问题，是系统在失稳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --bg2: #f2f0eb;
+    --bg3: #eceae4;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #111009;
+    --text2: #3a3830;
+    --text3: #807d76;
+    --accent: #b5622a;
+    --purple: #5a4ea0;
+    --teal: #2e7d5e;
+    --coral: #b5622a;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Noto Serif SC', serif;
+    --sans: 'Noto Sans SC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+  }
+  #progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 0;
+    background: var(--accent);
+    z-index: 100;
+    transition: width 0.1s linear;
+  }
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250,249,246,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .nav-logo,
+  .nav-links a,
+  .meta,
+  .section-label,
+  .card-num,
+  .footer {
+    font-family: var(--mono);
+  }
+  .nav-logo {
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+  }
+  .nav-links a {
+    font-size: 11px;
+    text-decoration: none;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 0.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: 'INSTABILITY';
+    position: absolute;
+    top: 88px;
+    right: -50px;
+    font-family: var(--mono);
+    font-size: 92px;
+    color: rgba(0,0,0,0.04);
+    letter-spacing: -0.05em;
+    white-space: nowrap;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.35;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.2s forwards;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .hero-desc {
+    max-width: 620px;
+    color: var(--text2);
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.3s forwards;
+  }
+  .meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.4s forwards;
+  }
+  .meta-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+  .phase-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .phase-card {
+    padding: 2rem 1.5rem;
+    border-right: 0.5px solid var(--border);
+  }
+  .phase-card:last-child { border-right: none; }
+  .phase-card:hover { background: var(--bg2); }
+  .bar {
+    width: 24px;
+    height: 2px;
+    margin-bottom: 1rem;
+    border-radius: 1px;
+  }
+  .card-num {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.1em;
+  }
+  .phase-card h3 {
+    font-family: var(--serif);
+    font-size: 17px;
+    margin-bottom: 0.4rem;
+  }
+  .phase-card p,
+  .section p,
+  .list-text {
+    color: var(--text2);
+  }
+  .section {
+    padding: 5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .section-label::after {
+    content: '';
+    width: 60px;
+    height: 0.5px;
+    background: var(--border);
+  }
+  .section h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+  }
+  .callout {
+    margin: 2rem 0;
+    padding: 1.2rem 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    color: var(--text2);
+  }
+  .callout strong { color: var(--accent); }
+  .stack-list,
+  .risk-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+  .stack-item,
+  .risk-item {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1.4rem 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .stack-item:last-child,
+  .risk-item:last-child { border-bottom: none; }
+  .stack-num,
+  .risk-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text3);
+    padding-top: 2px;
+  }
+  .stack-body strong,
+  .risk-body strong {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+  .flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+  }
+  .node,
+  .arrow,
+  .return-tag {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .node {
+    padding: 6px 14px;
+    border: 0.5px solid var(--border2);
+    border-radius: 999px;
+    background: var(--bg3);
+  }
+  .arrow { color: var(--text3); }
+  .return-tag {
+    margin-left: auto;
+    color: var(--accent);
+  }
+  .closing {
+    padding: 5rem 0 4rem;
+    text-align: center;
+  }
+  .closing-quote {
+    max-width: 660px;
+    margin: 0 auto 1.5rem;
+    font-family: var(--serif);
+    font-size: clamp(18px, 2.4vw, 26px);
+    line-height: 1.8;
+  }
+  .closing-quote em { font-style: normal; color: var(--accent); }
+  .closing-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  footer {
+    padding: 2rem;
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 640px) {
+    nav { padding: 1rem; }
+    .nav-links { display: none; }
+    .container { padding: 0 1.2rem; }
+    .hero { padding: 100px 0 60px; }
+    .hero::before { display: none; }
+    .phase-grid { grid-template-columns: 1fr; }
+    .phase-card { border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav>
+  <span class="nav-logo">Agent Systems / 2026</span>
+  <ul class="nav-links">
+    <li><a href="#demo">Demo</a></li>
+    <li><a href="#instability">失稳</a></li>
+    <li><a href="#modes">模式</a></li>
+    <li><a href="#closure">闭环</a></li>
+  </ul>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <p class="eyebrow">Agent Engineering · 控制论 · 系统稳定性</p>
+      <h1>Agent 为什么总在 demo 阶段死<br><em>不是能力问题，是系统在失稳</em></h1>
+      <p class="hero-desc">Agent 在演示里像数字员工，回到真实环境却高概率卡住、循环、忘记目标、做出离谱决策。问题往往不是模型不够强，而是我们把一个长时间运行、有状态、有副作用的系统，当成了一次性的函数调用。</p>
+      <div class="meta">
+        <span>篇 04</span>
+        <span class="meta-dot"></span>
+        <span>系统动力学</span>
+        <span class="meta-dot"></span>
+        <span>2026</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="phase-grid">
+    <div class="phase-card">
+      <div class="bar" style="background: var(--purple);"></div>
+      <div class="card-num">Signal 01</div>
+      <h3>Demo 世界是被布置过的</h3>
+      <p>干净输入、短路径任务、零失败成本，天然掩盖真实系统问题。</p>
+    </div>
+    <div class="phase-card">
+      <div class="bar" style="background: var(--teal);"></div>
+      <div class="card-num">Signal 02</div>
+      <h3>Agent 不是函数</h3>
+      <p>它是一个持续状态机，需要观测、反馈、约束与控制结构。</p>
+    </div>
+    <div class="phase-card">
+      <div class="bar" style="background: var(--coral);"></div>
+      <div class="card-num">Signal 03</div>
+      <h3>真正的问题叫失稳</h3>
+      <p>状态失控、反馈失效、噪声累积、目标漂移会一起把系统拖垮。</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <section id="demo" class="section">
+      <div class="section-label">01 — Demo 幻觉</div>
+      <h2>为什么 demo 几乎总是成功？</h2>
+      <p>因为 demo 是一个被精心构造的世界。它通常只有干净数据、短路径任务和几乎为零的失败成本。Agent 在这种环境里不是在面对现实复杂度，而是在解一道被人提前整理好的题。</p>
+      <div class="callout">
+        <strong>真实断裂：</strong>现实输入来自 PDF、邮件、口语与冲突信息，任务会跨越 20 多步、伴随分支与回滚，而且每次调用都可能产生真实成本与不可逆副作用。
+      </div>
+      <p>所以 demo 的成功，更多证明的是“这个系统在温室里可运行”，而不是“它在生产环境中可稳定”。</p>
+    </section>
+
+    <section id="instability" class="section">
+      <div class="section-label">02 — 关键转折</div>
+      <h2>Agent 不是 API，而是长时间运行的动态系统</h2>
+      <p>API 的世界是输入、输出、一次调用、无状态。Agent 的世界是多步执行、持续状态、与环境交互，以及带有副作用的不可逆行为。</p>
+      <div class="flow">
+        <span class="node">Intent</span>
+        <span class="arrow">→</span>
+        <span class="node">Plan</span>
+        <span class="arrow">→</span>
+        <span class="node">Action</span>
+        <span class="arrow">→</span>
+        <span class="node">Observation</span>
+        <span class="arrow">→</span>
+        <span class="node">Feedback</span>
+        <span class="return-tag">↺ 控制循环</span>
+      </div>
+      <p>一旦把 Agent 看成系统，核心问题就从“它会不会做”变成“它稳不稳定”。稳定系统至少需要状态可控、反馈有效、噪声可抑制、目标不漂移，而当前许多 Agent 恰恰在这四点上同时失分。</p>
+    </section>
+
+    <section id="modes" class="section">
+      <div class="section-label">03 — 失稳模式</div>
+      <h2>四种典型的失稳方式</h2>
+      <ul class="stack-list">
+        <li class="stack-item">
+          <span class="stack-num">01</span>
+          <div class="stack-body">
+            <strong>循环失稳</strong>
+            <span class="list-text">系统不断重复动作却没有新信息进入，成本持续上涨，本质是缺少“进度信号”，不知道自己是否在靠近目标。</span>
+          </div>
+        </li>
+        <li class="stack-item">
+          <span class="stack-num">02</span>
+          <div class="stack-body">
+            <strong>语境漂移</strong>
+            <span class="list-text">新信息覆盖旧约束，初始目标逐渐丢失，系统行为越来越偏，本质是状态没有被压缩、锚定与重述。</span>
+          </div>
+        </li>
+        <li class="stack-item">
+          <span class="stack-num">03</span>
+          <div class="stack-body">
+            <strong>工具级联失效</strong>
+            <span class="list-text">一个工具调用出错，后续步骤继续基于错误前提运行，问题会一路扩散，本质是缺少验证和回滚机制。</span>
+          </div>
+        </li>
+        <li class="stack-item">
+          <span class="stack-num">04</span>
+          <div class="stack-body">
+            <strong>成本失控</strong>
+            <span class="list-text">Token、时延、调用次数暴涨，但结果并未改善，本质是没有资源预算与停止条件。</span>
+          </div>
+        </li>
+      </ul>
+      <div class="callout">
+        <strong>统一解释：</strong>这些表象背后其实是一件事，Agent 系统缺少足够的控制论结构。它有模糊目标和很强执行，却没有足够强的反馈控制。
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-label">04 — 隐蔽失败</div>
+      <h2>为什么模型越强，问题反而越难发现？</h2>
+      <p>因为强模型更擅长“优雅地失败”。它能给出完整推理链、合理措辞和看似自洽的解释，让人误以为系统是对的。比报错更危险的是，它开始在错误之上维持一种表面的可信度。</p>
+      <p>这也是很多团队误判问题来源的原因。他们以为要换更强模型、调更细 prompt、喂更多数据，但真正的缺口不在模型层，而在架构层。</p>
+    </section>
+
+    <section id="closure" class="section">
+      <div class="section-label">05 — 三篇闭环</div>
+      <h2>从意图到语境，再到系统失稳</h2>
+      <p>前面的链条到这里已经连起来了：意图表达不清，context 缺乏结构，最终就会在执行阶段表现为系统失稳。这不是三个独立问题，而是一条连续的因果链。</p>
+      <ul class="risk-list">
+        <li class="risk-item">
+          <span class="risk-num">篇02</span>
+          <div class="risk-body">
+            <strong>意图不清</strong>
+            <span class="list-text">目标和约束无法稳定传递给系统。</span>
+          </div>
+        </li>
+        <li class="risk-item">
+          <span class="risk-num">篇03</span>
+          <div class="risk-body">
+            <strong>语境无结构</strong>
+            <span class="list-text">状态与背景信息无法被持续、可靠地组织。</span>
+          </div>
+        </li>
+        <li class="risk-item">
+          <span class="risk-num">篇04</span>
+          <div class="risk-body">
+            <strong>系统必然失稳</strong>
+            <span class="list-text">执行层就会出现循环、漂移、级联错误与预算爆炸。</span>
+          </div>
+        </li>
+      </ul>
+      <div class="callout">
+        <strong>收束：</strong>真正的问题不是 Agent 能不能做这件事，而是它能不能在第 100 次还做对。
+      </div>
+      <p>更深的问题则是：如果控制结构本身也被外包给另一个 Agent，系统还是否可控？</p>
+    </section>
+
+    <div class="closing">
+      <p class="closing-quote">Agent 的问题从来不只是“还不够强”，<br><em>而是我们还没有把它当作系统来设计</em>。</p>
+      <p class="closing-sub">Instability Before Intelligence</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Agent 为什么总在 demo 阶段死</span>
+  <span>2026</span>
+</footer>
+
+<script>
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    document.getElementById('progress').style.width = pct + '%';
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.section').forEach((section) => observer.observe(section));
+</script>
+</body>
+</html>

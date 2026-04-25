@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>反馈回路的设计｜人类如何给 AI 传递真正有用的信号</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --bg2: #f2f0eb;
+    --bg3: #eceae4;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #111009;
+    --text2: #3a3830;
+    --text3: #807d76;
+    --accent: #2e7d5e;
+    --purple: #5a4ea0;
+    --teal: #2e7d5e;
+    --coral: #b5622a;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Noto Serif SC', serif;
+    --sans: 'Noto Sans SC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+  }
+  #progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 0;
+    background: var(--accent);
+    z-index: 100;
+    transition: width 0.1s linear;
+  }
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(250,249,246,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .nav-logo,
+  .nav-links a,
+  .hero-meta,
+  .section-label,
+  .mini-num,
+  footer {
+    font-family: var(--mono);
+  }
+  .nav-logo {
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+  }
+  .nav-links a {
+    font-size: 11px;
+    text-decoration: none;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 0.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: 'FEEDBACK';
+    position: absolute;
+    top: 84px;
+    right: -36px;
+    font-family: var(--mono);
+    font-size: 116px;
+    color: rgba(0,0,0,0.04);
+    letter-spacing: -0.05em;
+    white-space: nowrap;
+  }
+  .hero-eyebrow {
+    margin-bottom: 1.5rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+  h1 {
+    margin-bottom: 1.5rem;
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.35;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.2s forwards;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .hero-desc {
+    max-width: 620px;
+    margin-bottom: 2rem;
+    color: var(--text2);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.3s forwards;
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.4s forwards;
+  }
+  .meta-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .summary-card {
+    padding: 2rem 1.5rem;
+    border-right: 0.5px solid var(--border);
+  }
+  .summary-card:last-child { border-right: none; }
+  .summary-card:hover { background: var(--bg2); }
+  .mini-bar {
+    width: 24px;
+    height: 2px;
+    margin-bottom: 1rem;
+    border-radius: 1px;
+  }
+  .mini-num {
+    margin-bottom: 0.6rem;
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  .summary-card h3 {
+    margin-bottom: 0.4rem;
+    font-family: var(--serif);
+    font-size: 17px;
+  }
+  .summary-card p,
+  .section p,
+  .pair-body span,
+  .level-body span {
+    color: var(--text2);
+  }
+  .section {
+    padding: 5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .section-label::after {
+    content: '';
+    width: 60px;
+    height: 0.5px;
+    background: var(--border);
+  }
+  .section h2 {
+    margin-bottom: 1.5rem;
+    font-family: var(--serif);
+    font-size: 26px;
+    line-height: 1.4;
+  }
+  .callout {
+    margin: 2rem 0;
+    padding: 1.2rem 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    color: var(--text2);
+  }
+  .callout strong { color: var(--accent); }
+  .pair-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 2rem 0;
+  }
+  .pair-box {
+    padding: 1.2rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+  }
+  .pair-title {
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 0.5px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+  }
+  .pair-list,
+  .level-list {
+    list-style: none;
+    margin: 2rem 0;
+  }
+  .pair-body ul,
+  .level-body ul {
+    list-style: none;
+  }
+  .pair-body li {
+    padding: 5px 0;
+  }
+  .level-item {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1.4rem 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .level-item:last-child { border-bottom: none; }
+  .level-num {
+    padding-top: 2px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .level-body strong {
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+  .flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+  }
+  .node,
+  .arrow,
+  .return-tag {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .node {
+    padding: 6px 14px;
+    border: 0.5px solid var(--border2);
+    border-radius: 999px;
+    background: var(--bg3);
+  }
+  .arrow { color: var(--text3); }
+  .return-tag {
+    margin-left: auto;
+    color: var(--accent);
+  }
+  .closing {
+    padding: 5rem 0 4rem;
+    text-align: center;
+  }
+  .closing-quote {
+    max-width: 680px;
+    margin: 0 auto 1.5rem;
+    font-family: var(--serif);
+    font-size: clamp(18px, 2.4vw, 26px);
+    line-height: 1.8;
+  }
+  .closing-quote em { font-style: normal; color: var(--accent); }
+  .closing-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+  footer {
+    padding: 2rem;
+    display: flex;
+    justify-content: space-between;
+    border-top: 0.5px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 640px) {
+    nav { padding: 1rem; }
+    .nav-links { display: none; }
+    .container { padding: 0 1.2rem; }
+    .hero { padding: 100px 0 60px; }
+    .hero::before { display: none; }
+    .summary-grid,
+    .pair-grid { grid-template-columns: 1fr; }
+    .summary-card { border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav>
+  <span class="nav-logo">Feedback Design / 2026</span>
+  <ul class="nav-links">
+    <li><a href="#gradient">梯度</a></li>
+    <li><a href="#bad">坏反馈</a></li>
+    <li><a href="#good">好反馈</a></li>
+    <li><a href="#mechanism">机制</a></li>
+  </ul>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">Evaluation Layer · Reward Design · Human Signals</p>
+      <h1>反馈回路的设计<br><em>人类如何给 AI 传递真正有用的信号</em></h1>
+      <p class="hero-desc">大多数人以为自己会“评价结果”，但在 AI 系统里，模糊的不满几乎等于没有反馈。真正有效的反馈不是情绪表达，而是给系统提供方向、约束和可执行的变化梯度。</p>
+      <div class="hero-meta">
+        <span>篇 05</span>
+        <span class="meta-dot"></span>
+        <span>反馈机制</span>
+        <span class="meta-dot"></span>
+        <span>2026</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="mini-bar" style="background: var(--teal);"></div>
+      <div class="mini-num">Core 01</div>
+      <h3>反馈不是抱怨</h3>
+      <p>“这个不太对”不包含方向信息，系统无法利用。</p>
+    </div>
+    <div class="summary-card">
+      <div class="mini-bar" style="background: var(--coral);"></div>
+      <div class="mini-num">Core 02</div>
+      <h3>反馈本质是梯度</h3>
+      <p>高质量反馈要告诉系统哪里错、往哪改、哪些约束不能变。</p>
+    </div>
+    <div class="summary-card">
+      <div class="mini-bar" style="background: var(--purple);"></div>
+      <div class="mini-num">Core 03</div>
+      <h3>设计回路而非句子</h3>
+      <p>真正稀缺的不是会提意见，而是会设计稳定的反馈机制。</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <section id="gradient" class="section">
+      <div class="section-label">01 — 梯度</div>
+      <h2>反馈不是“表达不满”，而是“提供梯度”</h2>
+      <p>把 AI 系统想成一个持续优化过程会更准确。它不断尝试、接收评价、然后调整策略。如果你的反馈没有告诉它如何变化，它就拿不到方向信息。</p>
+      <div class="callout">
+        <strong>核心命题：</strong>反馈不是“我不喜欢”，而是“应该往哪边移动”。没有梯度，系统只能随机探索加运气。
+      </div>
+      <div class="pair-grid">
+        <div class="pair-box">
+          <div class="pair-title">无效反馈</div>
+          <div class="pair-body">
+            <ul>
+              <li>写得不够好</li>
+              <li>太啰嗦了</li>
+              <li>不符合我的预期</li>
+            </ul>
+          </div>
+        </div>
+        <div class="pair-box">
+          <div class="pair-title">有效反馈</div>
+          <div class="pair-body">
+            <ul>
+              <li>删除第 2 段，它重复了第 1 段逻辑</li>
+              <li>保留结构，但语气更克制，减少形容词</li>
+              <li>优先保证逻辑完整，允许牺牲部分可读性</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <p>人类协作里，模糊反馈之所以勉强能工作，是因为对方会猜你的潜台词。但面对字面理解机器，这种隐式补偿几乎不存在。</p>
+    </section>
+
+    <section id="bad" class="section">
+      <div class="section-label">02 — 错误模式</div>
+      <h2>三种最常见的错误反馈</h2>
+      <ul class="level-list">
+        <li class="level-item">
+          <span class="level-num">01</span>
+          <div class="level-body">
+            <strong>情绪型反馈</strong>
+            <span>只有“不喜欢”“感觉怪”之类主观情绪，没有可执行信息，系统无从学习。</span>
+          </div>
+        </li>
+        <li class="level-item">
+          <span class="level-num">02</span>
+          <div class="level-body">
+            <strong>结果型反馈</strong>
+            <span>只说“结果不对”“重做一版”，却不指出错误来源，系统无法定位问题发生在哪一层。</span>
+          </div>
+        </li>
+        <li class="level-item">
+          <span class="level-num">03</span>
+          <div class="level-body">
+            <strong>过拟合反馈</strong>
+            <span>盯着局部细节强行修补，忽略整体结构，最终让系统学到局部最优而整体变差。</span>
+          </div>
+        </li>
+      </ul>
+      <div class="callout">
+        <strong>更残酷的结论：</strong>AI 不是在学习“你心里真正想要什么”，它在拟合你实际给出的反馈信号。信号模糊，策略就模糊；信号情绪化，策略也会情绪化。
+      </div>
+    </section>
+
+    <section id="good" class="section">
+      <div class="section-label">03 — 高质量反馈</div>
+      <h2>什么样的反馈才能稳定驱动系统改进？</h2>
+      <p>高质量反馈至少包含三层结构：定位问题、指出方向、保持约束一致性。它既告诉系统“哪里出了问题”，也告诉系统“应该朝哪里变”，还要避免在不同轮次里自我冲突。</p>
+      <div class="flow">
+        <span class="node">Locate</span>
+        <span class="arrow">→</span>
+        <span class="node">Direct</span>
+        <span class="arrow">→</span>
+        <span class="node">Constrain</span>
+        <span class="arrow">→</span>
+        <span class="node">Update</span>
+        <span class="return-tag">↺ 可学习回路</span>
+      </div>
+      <p>这也是为什么评价层会成为整个系统的信息瓶颈。前面所有生成、执行、工具调用，最终都要在这里被压缩成“下一步该如何变化”的信号。</p>
+    </section>
+
+    <section id="mechanism" class="section">
+      <div class="section-label">04 — 机制升级</div>
+      <h2>从“给一句反馈”到“设计反馈机制”</h2>
+      <p>真正的跃迁不在于会不会给意见，而在于能不能设计持续演化的信号系统。单点反馈只修局部，稳定的反馈回路则能修正行为模式。</p>
+      <p>这个系统通常至少包含三层：短期反馈做局部修正，长期反馈调策略，元反馈定义“系统该如何理解你的评价方式”。</p>
+      <div class="callout">
+        <strong>隐秘连接：</strong>从更深层看，人类其实在手写 reward function。问题是，大多数人并不知道自己正在写。
+      </div>
+      <p>一旦反馈机制设计得不好，就会出现奖励劫持。系统学会满足表面指标、规避真实目标，看起来“通过了评估”，实际上绕开了问题本身。</p>
+    </section>
+
+    <section class="section">
+      <div class="section-label">05 — 系列闭环</div>
+      <h2>无效反馈，意味着系统无法修正失稳</h2>
+      <p>把前几篇连起来会更清楚：意图不清，语境无结构，系统执行失稳，而反馈如果又无效，系统就失去了修正机制。于是问题不再是单次输出差，而是整个回路无法收敛。</p>
+      <div class="callout">
+        <strong>收束：</strong>当你说“再优化一下”时，你以为自己在指导系统，实际上很可能只是向优化过程输入了一个零梯度信号。
+      </div>
+      <p>更深的问题则在于，如果未来系统越来越依赖人类反馈，那偏见、价值判断与“谁来定义好”这件事，也会被一起放大进系统行为。</p>
+    </section>
+
+    <div class="closing">
+      <p class="closing-quote">AI 的问题常常不是“不会做”，<br><em>而是你没有给它可学习的信号</em>。</p>
+      <p class="closing-sub">Feedback As Gradient</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>反馈回路的设计</span>
+  <span>2026</span>
+</footer>
+
+<script>
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    document.getElementById('progress').style.width = pct + '%';
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.section').forEach((section) => observer.observe(section));
+</script>
+</body>
+</html>
