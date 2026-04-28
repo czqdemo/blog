@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shopify Flow 自然语言生成：一套 Agent 微调方法论</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1714;
+    --ink-mid: #3d3830;
+    --ink-soft: #6b6458;
+    --ink-ghost: #a09890;
+    --paper: #faf8f4;
+    --paper-warm: #f3efe8;
+    --paper-card: #ffffff;
+    --accent: #c0392b;
+    --accent-soft: #f5ddd9;
+    --accent-dark: #8e2318;
+    --teal: #16a085;
+    --teal-soft: #d5ede8;
+    --amber: #d4880a;
+    --amber-soft: #fdf0d5;
+    --code-bg: #f0ece4;
+    --border: rgba(26,23,20,0.12);
+    --border-strong: rgba(26,23,20,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 17px;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 80px 40px 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -80px;
+    width: 420px; height: 420px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.12;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; left: 10%;
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    background: var(--teal);
+    opacity: 0.08;
+  }
+  .hero-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(192,57,43,0.5);
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: clamp(26px, 4vw, 40px);
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    margin-bottom: 22px;
+    color: #f5f1eb;
+  }
+  .hero-lead {
+    font-size: 16px;
+    line-height: 1.75;
+    color: rgba(245,241,235,0.72);
+    max-width: 620px;
+    margin-bottom: 36px;
+  }
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .hero-stat-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .hero-stat-label {
+    font-size: 12px;
+    color: rgba(245,241,235,0.5);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Layout ── */
+  .article-wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 60px 24px 100px;
+  }
+
+  /* ── Meta bar ── */
+  .meta-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 0 36px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+    font-size: 13px;
+    color: var(--ink-ghost);
+    flex-wrap: wrap;
+  }
+  .meta-bar span { display: flex; align-items: center; gap: 6px; }
+  .meta-dot {
+    width: 3px; height: 3px;
+    background: var(--border-strong);
+    border-radius: 50%;
+  }
+
+  /* ── Typography ── */
+  h2 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 52px 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--accent);
+    line-height: 1.4;
+  }
+  h3 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--ink-mid);
+    margin: 36px 0 14px;
+    line-height: 1.45;
+  }
+  p {
+    color: var(--ink-mid);
+    margin-bottom: 20px;
+    font-size: 16.5px;
+  }
+
+  /* ── Lead paragraph ── */
+  .lead {
+    font-size: 18px;
+    line-height: 1.9;
+    color: var(--ink);
+    border-left: 3px solid var(--accent);
+    padding-left: 20px;
+    margin-bottom: 36px;
+  }
+
+  /* ── Callout boxes ── */
+  .callout {
+    background: var(--paper-warm);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--teal);
+    border-radius: 4px;
+    padding: 18px 22px;
+    margin: 28px 0;
+    font-size: 15px;
+    color: var(--ink-mid);
+    line-height: 1.75;
+  }
+  .callout.warn {
+    border-left-color: var(--amber);
+    background: var(--amber-soft);
+  }
+  .callout.key {
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .callout-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: var(--teal);
+  }
+  .callout.warn .callout-title { color: var(--amber); }
+  .callout.key .callout-title { color: var(--accent-dark); }
+
+  /* ── Metric cards ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin: 32px 0;
+  }
+  .metric {
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 18px;
+    text-align: center;
+  }
+  .metric-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 500;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .metric-label {
+    font-size: 12px;
+    color: var(--ink-ghost);
+    line-height: 1.4;
+  }
+
+  /* ── Code block ── */
+  .code-block {
+    background: var(--ink);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 24px 0;
+  }
+  .code-header {
+    background: rgba(255,255,255,0.06);
+    padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .code-block pre {
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #d4cfc5;
+    overflow-x: auto;
+  }
+  .code-block .kw { color: #f08a6c; }
+  .code-block .fn { color: #7ec8c8; }
+  .code-block .cm { color: #7a7468; }
+  .code-block .str { color: #a8cc8c; }
+
+  /* ── Step list ── */
+  .steps {
+    counter-reset: step;
+    margin: 24px 0 32px;
+    padding: 0;
+    list-style: none;
+  }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 18px;
+    font-size: 16px;
+    color: var(--ink-mid);
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(step);
+    min-width: 28px;
+    height: 28px;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Comparison table ── */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 28px 0;
+    font-size: 14.5px;
+  }
+  .compare-table th {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+  .compare-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink-mid);
+    vertical-align: top;
+  }
+  .compare-table tr:hover td { background: var(--paper-warm); }
+  .compare-table .good { color: var(--teal); font-weight: 500; }
+  .compare-table .bad { color: var(--accent); font-weight: 500; }
+
+  /* ── Flywheel visual ── */
+  .flywheel {
+    background: var(--ink);
+    border-radius: 8px;
+    padding: 36px 32px;
+    margin: 32px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .fw-step {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .fw-num {
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid rgba(192,57,43,0.6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .fw-text {
+    font-size: 15px;
+    color: rgba(245,241,235,0.82);
+    line-height: 1.5;
+  }
+  .fw-connector {
+    width: 32px;
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+    color: rgba(192,57,43,0.35);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* ── Section divider ── */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 52px 0 0;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--border); }
+  .divider-mark {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    transform: rotate(45deg);
+  }
+
+  /* ── Pull quote ── */
+  .pullquote {
+    margin: 36px 0;
+    padding: 28px 32px;
+    background: var(--accent-soft);
+    border-radius: 4px;
+    position: relative;
+  }
+  .pullquote::before {
+    content: '"';
+    font-family: 'Noto Serif SC', serif;
+    font-size: 80px;
+    color: var(--accent);
+    opacity: 0.25;
+    position: absolute;
+    top: -8px; left: 16px;
+    line-height: 1;
+  }
+  .pullquote p {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 18px;
+    line-height: 1.75;
+    color: var(--accent-dark);
+    font-weight: 400;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Tag pills ── */
+  .tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .tag {
+    font-size: 12px;
+    padding: 4px 12px;
+    background: var(--paper-warm);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--ink-soft);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Authors ── */
+  .authors {
+    background: var(--paper-warm);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px 28px;
+    margin-top: 40px;
+  }
+  .authors-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-ghost);
+    margin-bottom: 10px;
+  }
+  .authors p { font-size: 14px; color: var(--ink-soft); margin: 0; }
+
+  strong { font-weight: 700; color: var(--ink); }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--accent-dark);
+  }
+
+  @media (max-width: 600px) {
+    .hero { padding: 52px 20px 44px; }
+    .hero-stats { gap: 20px; }
+    .article-wrap { padding: 40px 16px 80px; }
+    h2 { font-size: 21px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">AI 工程 · 大模型微调 · 2026</div>
+    <h1>用自然语言生成 Flow 自动化工作流：<br>Shopify 的 Agent 微调方法论</h1>
+    <p class="hero-lead">
+      Shopify 将 Qwen3-32B 微调成一个工具调用 Agent，让商家用一句话就能生成复杂的自动化流程。比原来的前沿闭源模型快 2.2 倍、成本降低 68%，还跑赢了 GPT-4 级别的对手。
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-num">2.2×</span>
+        <span class="hero-stat-label">推理速度提升</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">68%</span>
+        <span class="hero-stat-label">成本下降</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">+22pt</span>
+        <span class="hero-stat-label">语法正确率提升</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">+13pt</span>
+        <span class="hero-stat-label">语义正确率提升</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Article -->
+<main class="article-wrap">
+
+  <div class="meta-bar">
+    <span>作者：Ted Chaiwachirasak</span>
+    <div class="meta-dot"></div>
+    <span>发布于 2026 年 4 月 22 日</span>
+    <div class="meta-dot"></div>
+    <span>原文：Shopify Engineering Blog</span>
+  </div>
+
+  <p class="lead">
+    如果你只是在闭源模型 API 上叠需求，拥有 API key 的竞争对手随时能复制你的产品。真正的差异化来自三件事：专有数据、训练方案，以及持续迭代的速度。
+  </p>
+
+  <p>Shopify 拥有大多数公司没有的优势——一个有数百万商家实时交互的产品表面，这些交互直接反映模型输出的质量好坏。这个反馈闭环是差异化的基础，但前提是你要不断地从中学习。</p>
+
+  <p>这篇文章介绍 Shopify 如何将 <strong>Qwen3-32B</strong> 微调成一个工具调用 Agent，用于 <strong>Sidekick</strong>（Shopify 的 AI 商业助手），把商家的自然语言输入转化成 Shopify Flow 自动化工作流。过程中遇到的每一个坑，都比论文里描述的更狡猾。</p>
+
+  <!-- ── Section 1 ── -->
+  <h2>一、构建训练数据集</h2>
+
+  <p>Shopify Flow 是一个自动化平台，商家可以用触发器、条件和动作来搭建工作流。对非技术商家来说，从空白画布开始构建正确的工作流是令人望而却步的——Sidekick 的任务是让他们说一句话就搞定。</p>
+
+  <h3>冷启动问题</h3>
+
+  <p>微调需要训练数据，但这个功能还没上线，所以根本没有生产对话可以学习。Shopify 的解法是：<strong>从现有生产工作流反向推导用户意图</strong>。</p>
+
+  <p>数千名匿名商家已经在 Flow 里手动搭建好了工作流。团队对这些工作流进行采样和质量过滤：过去七天内至少运行过一次、来自拥有两个以上合格工作流的商家、每个描述符只取一个样本以确保多样性。</p>
+
+  <p>有了这批高质量工作流之后，流程是这样的：</p>
+
+  <ol class="steps">
+    <li>从生产环境中抽取一个经过验证的热门工作流</li>
+    <li>用更强的 LLM 生成一条"能引出这个工作流"的自然语言请求</li>
+    <li>构建完整的多轮工具调用轨迹——一个理想 Agent 从头到尾应该怎么执行。这一步是工程量最大的部分。</li>
+  </ol>
+
+  <p>用这套合成数据集微调 Qwen3-32B，并以 300 个手工制作的样本作为 benchmark 进行评估（覆盖 Flow 的主要使用场景）。评估框架用 LLM judge 进行语义正确性对比，用程序化方法验证语法正确性。</p>
+
+  <div class="metrics">
+    <div class="metric">
+      <span class="metric-num">语义</span>
+      <span class="metric-label">LLM judge 对生成工作流与期望工作流进行语义对比</span>
+    </div>
+    <div class="metric">
+      <span class="metric-num">语法</span>
+      <span class="metric-label">程序化检测：条件格式、引用、配置是否合法</span>
+    </div>
+    <div class="metric">
+      <span class="metric-num">延迟</span>
+      <span class="metric-label">从请求到工作流交付的耗时</span>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">工程洞见</div>
+    如果还没有用户交互数据，就从用户已经产出的输出物（工作流、文档、配置文件）出发，逆向推导意图。这往往是在指标还没跑起来之前，最正确的第一步。
+  </div>
+
+  <!-- ── Section 2 ── -->
+  <h2>二、Python DSL：让模型在它熟悉的语言里学习</h2>
+
+  <p>Shopify Flow 工作流在内部用一套 JSON-based DSL 表示，专为后端解析、校验和执行设计。这个格式对生产系统是理想的，但对 LLM 来说很不友好——程序逻辑被深埋在深层嵌套的 JSON 结构里，而这种写法在预训练数据中极为罕见。</p>
+
+  <p>团队的解法是：<strong>不强迫模型从零学习 Flow 的原生格式，而是把任务重新用更接近模型训练分布的表示方式来描述——让模型用 Python 来写工作流。</strong></p>
+
+  <p>一个 Transpiler（转译器）负责将 JSON DSL 转换成语义等价的 Python：</p>
+
+  <div class="code-block">
+    <div class="code-header">Python DSL 示例（模型输出格式）</div>
+    <pre><span class="cm"># 当订单金额超过 $100 时，自动打标签 "VIP"</span>
+<span class="kw">@trigger</span>(<span class="str">"order/created"</span>)
+<span class="kw">def</span> <span class="fn">tag_vip_order</span>(order):
+    <span class="kw">if</span> order.total_price > <span class="str">100</span>:
+        order.add_tag(<span class="str">"VIP"</span>)</pre>
+  </div>
+
+  <p>这是同一个工作流，同样的语义，但模型现在生成的是 Python 而不是数据格式。Python 在预训练数据里占有大量比重——装饰器、if/else、变量、循环、函数调用，这些都是模型已经熟悉的语言模式。</p>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>指标</th>
+        <th>JSON DSL（原格式）</th>
+        <th>Python DSL（新格式）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>语法正确率</td>
+        <td class="bad">基准</td>
+        <td class="good">+22 个百分点</td>
+      </tr>
+      <tr>
+        <td>语义正确率</td>
+        <td class="bad">基准</td>
+        <td class="good">+13 个百分点</td>
+      </tr>
+      <tr>
+        <td>模型学习难度</td>
+        <td class="bad">需同时学格式和任务</td>
+        <td class="good">只需专注于学任务本身</td>
+      </tr>
+      <tr>
+        <td>商家是否看到 Python</td>
+        <td>—</td>
+        <td class="good">不可见，由后端静默转换</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout key">
+    <div class="callout-title">核心原则</div>
+    将目标格式从"分布外"移到"分布内"，把问题从「既要学新语言、又要学任务」变成「只学任务本身」。
+  </div>
+
+  <p>这套方案的保障来自严格的<strong>端到端 Transpiler 测试</strong>：所有经由 Sidekick 创建的生产工作流都会被持续 round-trip 测试（JSON → Python → JSON），任何不一致都会在进入训练数据之前被拦截。推理时，模型写 Python，Transpiler 转换成 JSON 送往 Flow 后端，商家和后端都不需要知道 Python 的存在。</p>
+
+  <!-- ── Section 3 ── -->
+  <h2>三、镜像生产环境：细节里的恶魔</h2>
+
+  <p>表示方式只是数据问题的一半。另一半是确保训练数据与生产环境<em>完全</em>一致——而团队发现，模型对这种一致性有多敏感，超出了任何人的预期。</p>
+
+  <p>每一处差异被弥合，无论看起来多微小，都能提升评估分数：</p>
+
+  <h3>工具命名与排序</h3>
+  <p>训练数据里用的是完整带前缀的名字 <code>flow_app_agent_task_search</code>，但推理时同一个工具叫做 <code>task_search</code>。功能完全相同，但模型把它们当成了两个不同的工具。去掉前缀以匹配推理环境，准确率提升。工具在系统提示中出现的<strong>顺序</strong>也很重要——训练和服务时的顺序不同，性能就会下降。</p>
+
+  <h3>工具响应格式</h3>
+  <p>工具响应返回的是含多个字段的 JSON 对象。训练数据里 key 按字母顺序排列，如果生产环境返回时顺序不同或多了一个字段，模型会注意到。训练数据展示的内容和生产 API 实际返回的内容之间的任何漂移，都会降低准确率。</p>
+
+  <h3>系统提示与工具描述</h3>
+  <p>生产环境中工具描述会随产品团队的迭代频繁更新。每次更新都必须同步到训练数据，否则模型行为就会偏移。保持两者同步是持续的工作，不是一次性的。</p>
+
+  <div class="callout warn">
+    <div class="callout-title">警告</div>
+    模型将每一个 token 都当成信号，不管你是否有意为之。格式细节不是可以忽略的噪声——它们是模型学习的一部分。
+  </div>
+
+  <!-- ── Section 4 ── -->
+  <h2>四、优化工具调用栈，压缩上下文</h2>
+
+  <p>Agent 每调用一次工具，其响应就会进入上下文。上下文增长，延迟增长，成本增长。更糟糕的是，无关上下文会稀释信号——模型在处理它用不上的信息时，推理准确率会下降。</p>
+
+  <p>团队对工具接口进行了重构，<strong>最小化每一步的上下文</strong>：工具先返回轻量摘要，模型扫描摘要，选出需要的内容，再仅对那些条目检索完整信息。两次廉价调用代替一次昂贵调用。</p>
+
+  <p>例如，Flow 有数百个可用的触发器、条件和动作。一次搜索可能匹配 100 个结果。不是把每一个的完整配置 Schema 都塞进上下文，<code>task_search</code> 只返回名称和描述，模型选出真正需要的 2-3 个，再调用 <code>task_configuration</code> 获取完整 Schema。上下文保持精简，推理保持聚焦。</p>
+
+  <!-- ── Section 5 ── -->
+  <h2>五、让训练跑得足够快</h2>
+
+  <p>数据管道规模扩大后，一个矛盾随之出现：更多训练数据能提升准确率，但每次训练也会变慢；训练越慢，迭代次数越少，改进越慢。团队的解法是：在基础设施上做投资，让两者都可以兼得。</p>
+
+  <p>Qwen3-32B 在两个节点的 H200 GPU 上使用 <strong>FSDP（全参数分片数据并行）</strong>训练，完整训练一次只需 12 小时，足以支撑每周重训，中间还能穿插多次实验性运行。</p>
+
+  <p>整个管道——数据采集、训练、评估、部署——运行在 <strong>Tangle</strong>（Shopify 开源的 ML 实验平台）之上。Tangle 将每个步骤编排成一个可复现的工作流，并带有智能缓存：某个部分发生变化时，只重新运行受影响的步骤。</p>
+
+  <p>CometML 跟踪每次运行，HuggingFace 托管数据集和 Checkpoint，CentML 负责生产环境推理服务。每周重训无需人工干预自动运行。</p>
+
+  <!-- ── Section 6 ── -->
+  <h2>六、Benchmark 不等于现实——那 35% 的差距</h2>
+
+  <p>合成数据让模型在离线 Benchmark 上达到了与闭源模型持平的水准。所有追踪指标都显示：微调模型已经准备好上线了。于是他们把它部署到 1% 的流量上，看看实际表现。</p>
+
+  <div class="pullquote">
+    <p>在 1% 流量下，微调模型的工作流激活率（商家实际开启 Sidekick 生成的工作流的比率）比 Prompt-based Agent 低了 35%。</p>
+  </div>
+
+  <p>Benchmark 覆盖了团队预期商家会问什么，但没有覆盖他们<em>实际上</em>问什么——编辑现有工作流、处理邮件配置、接入第三方集成、询问 Flow 但并不打算创建工作流。</p>
+
+  <p>模型在分布内表现良好，但真实流量很快暴露出合成数据没有覆盖的分布外请求。低流量的早期部署精准告诉了团队下一步该专注什么。</p>
+
+  <div class="callout">
+    <div class="callout-title">评估策略</div>
+    工作流激活率是第一个生产信号，但它反映的是商家行为，而不是模型质量。团队最终以领域专家校准的 LLM judge 为优化目标，同时把激活率作为不可退步的护栏指标。
+  </div>
+
+  <!-- ── Section 7 ── -->
+  <h2>七、持续飞轮：从追赶到领先</h2>
+
+  <h3>诊断层：找到差距在哪</h3>
+
+  <p>团队构建了一个 <strong>LLM judge</strong> 对每次对话从多个维度评分：助手是否正确理解了商家意图、是否只在合适时才给出 Flow 方案、是否选对了组件、后续步骤是否清晰。Judge 对每个维度分别评分，而不是只给一个通过/失败的结论。</p>
+
+  <p>为了校准 Judge，团队收集了数百个对话的人工标注，反复调整直到其评分与人类判断对齐，再对照生产激活率进行验证。</p>
+
+  <p>一套<strong>标签系统</strong>沿多个维度对每个工作流进行分类：使用了哪些触发器、检查了什么条件、调用了哪些动作、是否涉及第三方集成。对比各标签切片的性能，精确定位模型在哪里表现差。某个切片性能下降时，就知道该补充什么类型的数据。</p>
+
+  <p>诊断结果指向了具体的修复方向：</p>
+  <ul style="margin: 12px 0 20px; padding-left: 24px; color: var(--ink-mid); font-size: 16px; line-height: 2;">
+    <li>邮件工作流占失败案例的 25%，针对性补充邮件示例</li>
+    <li>多样化的条件模式占 16%</li>
+    <li>工作流编辑（合成数据从未覆盖的场景）</li>
+  </ul>
+
+  <h3>飞轮：持续运转的改进循环</h3>
+
+  <p>关闭差距只是第一个测试，真正的目标是保持领先。每一条生产对话都变成了训练信号。团队对高质量样本进行采样：商家在对话后实际激活了工作流的对话。Judge 打分，高分对话自动进入训练池，低分对话隔离等待人工审查。</p>
+
+  <div class="flywheel">
+    <div class="fw-step">
+      <div class="fw-num">1</div>
+      <div class="fw-text">摄取生产对话</div>
+    </div>
+    <div class="fw-step"><div class="fw-connector">↓</div><div></div></div>
+    <div class="fw-step">
+      <div class="fw-num">2</div>
+      <div class="fw-text">LLM judge 评分</div>
+    </div>
+    <div class="fw-step"><div class="fw-connector">↓</div><div></div></div>
+    <div class="fw-step">
+      <div class="fw-num">3</div>
+      <div class="fw-text">高质量样本进入训练池；低质量隔离审查</div>
+    </div>
+    <div class="fw-step"><div class="fw-connector">↓</div><div></div></div>
+    <div class="fw-step">
+      <div class="fw-num">4</div>
+      <div class="fw-text">通过标签切片分析识别差距</div>
+    </div>
+    <div class="fw-step"><div class="fw-connector">↓</div><div></div></div>
+    <div class="fw-step">
+      <div class="fw-num">5</div>
+      <div class="fw-text">重新训练并部署 → 回到第 1 步</div>
+    </div>
+  </div>
+
+  <p>系统随生产流量的变化自动改进，让团队可以把精力放在扩展覆盖范围和修复系统性差距上，而不是手动整理数据。</p>
+
+  <!-- ── Section 8 ── -->
+  <h2>八、下一步：模拟环境与在线学习</h2>
+
+  <p>飞轮已经运转，但闭源模型和自研模型之间的赛跑不会停歇。每隔几个月，新的前沿模型就会拉高门槛。唯一的应对方式是持续复利：更好的数据、更好的训练、更好的评估、更快的迭代。</p>
+
+  <h3>模拟环境</h3>
+  <p>一个沙箱，让模型可以生成工作流并接收结构化反馈（是否会成功执行），而不影响真实商家。模型在模拟 Flow 环境中编写测试用例并运行，创造出可验证奖励（Verifiable Rewards）的条件。这为从更强教师模型的蒸馏以及在线策略优化打开了大门。</p>
+
+  <h3>从离线学习到在线学习</h3>
+  <p>目前的一切都是离线学习（Off-policy）：模型从事后精心筛选的示例中学习。有了模拟环境提供的可验证奖励，下一步是策略优化——让模型从自己生成的轨迹中学习。目标是一个能发现更好策略的模型，而不只是复现它见过的东西。</p>
+
+  <h3>评估自动校准</h3>
+  <p>今天的 LLM judge 是依靠人工标注和生产激活率手动校准的。但商家行为会变，新的集成会上线，新的工作流模式出现的速度比手动重新校准要快得多。让 judge 基于实时生产信号自动校准，是下一个评估挑战。</p>
+
+  <!-- ── Section 9 ── -->
+  <h2>九、这套方法适用于哪些场景？</h2>
+
+  <p>Shopify 的经验可以在以下情形下推广：</p>
+
+  <ol class="steps">
+    <li><strong>任务需要工具调用</strong>：模型必须推理、行动并整合外部结果，而不只是生成文本。</li>
+    <li><strong>输出格式是自定义 DSL</strong>：这种 DSL 不在预训练数据中，但其语义可以用模型熟悉的语言来表达。</li>
+    <li><strong>端到端 Transpiler 是可行的</strong>：可以在分布内表示与生产格式之间双向转换。</li>
+    <li><strong>有生产反馈闭环</strong>：合成数据让你起步，但真实世界数据才能带你到生产质量。</li>
+  </ol>
+
+  <!-- ── Closing ── -->
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-mark"></div>
+    <div class="divider-line"></div>
+  </div>
+
+  <h2>结语</h2>
+
+  <p>这套微调 Flow Agent 的系统现在服务于 Shopify 大部分的生产流量。</p>
+
+  <p>没有哪个单一技术让这一切成为可能。每个阶段都建立在上一个阶段之上：合成数据生成需要 Python DSL 来弥合准确率差距；Python DSL 需要生产镜像才能在真实环境中撑住；生产镜像需要稳定到可以信任的基础设施；而当 Benchmark 说"准备好了"但生产说"不行"时，飞轮在两周内关闭了这个差距。</p>
+
+  <div class="pullquote">
+    <p>六个月前，这套系统跑在一个我们控制不了的前沿模型上。现在，它跑在我们训练的模型上，在我们拥有的基础设施上，用只有我们才有的数据不断改进，成本降低了 68%。正在运行的这个版本，已经比正在它身后重新训练的下一个版本要差了。我们曾经租用别人的土地。这是我们开垦自己土地的第一英里。</p>
+  </div>
+
+  <div class="authors">
+    <div class="authors-title">贡献者</div>
+    <p>Nicolas Bertagnolli、Joe Lin、Han Li、Mingyu Zhao、Jason Liu、LinKai Ma、Yuxuan Wang、Matt Koenig、Lingyun Wang 以及 Agentic Foundation Modeling Team</p>
+  </div>
+
+  <div class="tags">
+    <span class="tag">大模型微调</span>
+    <span class="tag">工具调用 Agent</span>
+    <span class="tag">合成数据</span>
+    <span class="tag">Python DSL</span>
+    <span class="tag">Qwen3-32B</span>
+    <span class="tag">飞轮式持续改进</span>
+    <span class="tag">LLM Judge</span>
+    <span class="tag">Shopify Flow</span>
+    <span class="tag">FSDP 分布式训练</span>
+    <span class="tag">生产反馈闭环</span>
+  </div>
+
+</main>
+
+</body>
+</html>
